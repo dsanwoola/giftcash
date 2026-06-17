@@ -1,5 +1,6 @@
 import { Logo } from "./ui/logo";
 import { HeaderAuth } from "./auth/header-auth";
+import Link from "next/link";
 
 export function SiteHeader() {
   return (
@@ -7,10 +8,10 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Logo />
         <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
-          <a href="/#how" className="hover:text-ink">How it works</a>
-          <a href="/#occasions" className="hover:text-ink">Occasions</a>
-          <a href="/#features" className="hover:text-ink">Features</a>
-          <a href="/dashboard" className="hover:text-ink">Dashboard</a>
+          <Link href="/#how" className="hover:text-ink">How it works</Link>
+          <Link href="/#occasions" className="hover:text-ink">Occasions</Link>
+          <Link href="/#features" className="hover:text-ink">Features</Link>
+          <Link href="/dashboard" className="hover:text-ink">Dashboard</Link>
         </nav>
         <HeaderAuth />
       </div>

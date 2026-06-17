@@ -11,6 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ButtonLink } from "@/components/ui/button";
 import { OCCASIONS } from "@/lib/occasions";
+import Link from "next/link";
 
 const features: {
   icon: React.ElementType;
@@ -107,7 +108,7 @@ export default function Home() {
         <h2 className="font-display text-2xl font-semibold">For every celebration</h2>
         <div className="mt-6 flex gap-3 overflow-x-auto pb-3 no-scrollbar">
           {OCCASIONS.filter((o) => o.id !== "custom").map((o) => (
-            <a
+            <Link
               key={o.id}
               href="/gift/create"
               className="group flex min-w-[140px] flex-col gap-2 rounded-2xl border border-ink/5 bg-white/70 p-4 transition hover:-translate-y-1 hover:shadow-soft"
@@ -120,7 +121,7 @@ export default function Home() {
               </span>
               <span className="font-medium">{o.label}</span>
               <span className="text-xs text-muted">{o.tagline}</span>
-            </a>
+            </Link>
           ))}
         </div>
       </section>
@@ -164,7 +165,7 @@ export default function Home() {
             );
             const cls = "relative block rounded-3xl border border-ink/5 bg-white/70 p-6 shadow-soft";
             return f.href ? (
-              <a key={f.title} href={f.href} className={`${cls} transition hover:-translate-y-1`}>{card}</a>
+              <Link key={f.title} href={f.href} className={`${cls} transition hover:-translate-y-1`}>{card}</Link>
             ) : (
               <div key={f.title} className={cls}>{card}</div>
             );

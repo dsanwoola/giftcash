@@ -1,4 +1,5 @@
 import { Logo } from "./ui/logo";
+import Link from "next/link";
 
 export function SiteFooter() {
   return (
@@ -14,9 +15,9 @@ export function SiteFooter() {
         <div className="text-sm">
           <p className="font-medium">Product</p>
           <ul className="mt-3 space-y-2 text-muted">
-            <li><a href="/gift/create" className="hover:text-ink">Send a Gift</a></li>
-            <li><a href="/dashboard" className="hover:text-ink">Dashboard</a></li>
-            <li><a href="/dashboard/wallet" className="hover:text-ink">Wallet</a></li>
+            <li><Link href="/gift/create" className="hover:text-ink">Send a Gift</Link></li>
+            <li><Link href="/dashboard" className="hover:text-ink">Dashboard</Link></li>
+            <li><Link href="/dashboard/wallet" className="hover:text-ink">Wallet</Link></li>
           </ul>
         </div>
         <div className="text-sm">
