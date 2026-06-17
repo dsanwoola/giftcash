@@ -1,0 +1,85 @@
+rules_version = '2';
+
+// Gift Cash — Firestore security rules.
+// Fintech posture: wallets & ledger are read-only to clients (written only by
+// trusted server / Cloud Functions via the Admin SDK). Gifts are publicly
+// readable by slug (the reveal link is the capability) but only the sender can
+// mutate metadata, and claims are server-enforced.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+        && get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Profiles: a user reads/writes only their own; admins read all.
+    match /profiles/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid)
+        && !( 'role' in request.resource.data.diff(resource.data).affectedKeys() ); // can't self-promote
+      allow delete: if false;
+    }
+
+    // Wallets & ledger: read-only to the owner; never client-writable.
+    match /wallets/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+    match /ledger_entries/{id} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false; // append-only, server side only
+    }
+
+    // Gifts: anyone with the link can read; only the sender edits non-claim fields.
+    match /gifts/{slug} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update: if isOwner(resource.data.senderId)
+        && !( 'claimStatus' in request.resource.data.diff(resource.data).affectedKeys() )
+        && !( 'status' in request.resource.data.diff(resource.data).affectedKeys() );
+      // Claiming & status transitions go through the server (Admin SDK).
+      allow delete: if false;
+    }
+
+    // Withdrawals: owner creates a request & reads their own; processing is server-side.
+    match /withdrawals/{id} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid || isAdmin();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // Group gifts: anyone with the link can read; the organizer creates & edits;
+    // any signed-in user may append to the contributions array (only that field).
+    match /groupGifts/{slug} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isOwner(resource.data.organizerId) ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['contributions'])
+      );
+      allow delete: if isOwner(resource.data.organizerId);
+    }
+
+    // Event pages: public read; only the organizer edits settings (show total,
+    // sound, goal). Contributions are written ONLY by the server (Admin SDK) via
+    // /api/events/[slug]/contribute, so campaign caps & donor rules can't be
+    // bypassed by a client.
+    match /events/{slug} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
+      allow update: if isOwner(resource.data.organizerId)
+        && !( 'contributions' in request.resource.data.diff(resource.data).affectedKeys() );
+      allow delete: if isOwner(resource.data.organizerId);
+    }
+
+    // Admin-only collections.
+    match /admin_audit_logs/{id} { allow read, write: if isAdmin(); }
+    match /fraud_flags/{id} { allow read, write: if isAdmin(); }
+  }
+}
