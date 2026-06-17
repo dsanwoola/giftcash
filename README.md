@@ -36,7 +36,9 @@ The app runs in **demo mode** out of the box — no backend required. All data
 ## Going live with Firebase
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
-2. Add a **Web app** and copy the config into `.env.local` (see `.env.example`):
+2. Add a **Web app** and copy the config into local `.env.local` for development
+   and into **Firebase App Hosting → Backend → Settings → Environment** for
+   production:
 
    ```
    NEXT_PUBLIC_FIREBASE_API_KEY=...
@@ -49,9 +51,24 @@ The app runs in **demo mode** out of the box — no backend required. All data
 
 3. **Authentication** → enable Email/Password, Google and Phone sign-in.
 4. **Firestore** → create a database and deploy the rules in `firestore.rules`.
+   The repo includes `firebase.json`, so the rules deploy command is:
+
+   ```bash
+   firebase deploy --only firestore:rules --project YOUR_FIREBASE_PROJECT_ID
+   ```
+
 5. **Admin SDK** (for ledger-affecting ops) → Project settings → Service accounts
-   → generate a key, and set `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`,
-   `FIREBASE_PRIVATE_KEY` in `.env.local` (see `.env.example`).
+   → generate a key, and set these server-only variables in App Hosting
+   Environment. Never commit them to GitHub:
+
+   ```
+   FIREBASE_PROJECT_ID=...
+   FIREBASE_CLIENT_EMAIL=...
+   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+   ```
+
+6. **App Hosting** → connect GitHub repo `dsanwoola/giftcash`, live branch `main`,
+   app root `/`, then deploy. Runtime defaults live in `apphosting.yaml`.
 
 `src/lib/firebase/client.ts` detects the public config automatically. Until it's
 present, the app stays in demo mode — no code changes needed to switch.

@@ -1,0 +1,13 @@
+# Firebase App Hosting configuration for GiftCash.
+# Secrets and environment variables are set in Firebase Console:
+# App Hosting → giftcash backend → Settings → Environment.
+
+runConfig:
+  # Keep idle cost low while the product is still early.
+  minInstances: 0
+  # Conservative production cap; raise after traffic/payment volume grows.
+  maxInstances: 10
+  # Defaults suitable for a Next.js app with API routes.
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
