@@ -1,36 +1,79 @@
 import "server-only";
-import { cert, getApp, getApps, initializeApp, type App } from "firebase-admin/app";
+import {
+  cert,
+  getApp,
+  getApps,
+  initializeApp,
+  type App,
+  type ServiceAccount,
+} from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 /**
  * Firebase Admin SDK (server only). Used by API route handlers for privileged,
- * ledger-affecting operations. Configure with a service account via env:
+ * ledger-affecting operations.
+ *
+ * Preferred production env:
+ *   FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"...","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\\n..."}
+ *
+ * Alternative split env:
  *   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
- * (see .env.example). The private key keeps its literal "\n" newlines in env.
+ *
+ * Never prefix server credentials with NEXT_PUBLIC and never commit them.
  */
 
 /** A value counts as set only if it's present and not a template placeholder. */
-const isReal = (v?: string) => Boolean(v) && !/PASTE_|your-project/i.test(v!);
+const isReal = (v?: string) => Boolean(v) && !/PASTE_|your-project|REDACTED/i.test(v!);
 
-export const isAdminConfigured =
+const hasServiceAccountJson = isReal(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+const hasSplitServiceAccount =
   isReal(process.env.FIREBASE_PROJECT_ID) &&
   isReal(process.env.FIREBASE_CLIENT_EMAIL) &&
   isReal(process.env.FIREBASE_PRIVATE_KEY);
+
+export const isAdminConfigured = hasServiceAccountJson || hasSplitServiceAccount;
+
+function serviceAccountFromJson(): ServiceAccount {
+  try {
+    const parsed = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON!) as {
+      project_id?: string;
+      client_email?: string;
+      private_key?: string;
+    };
+    return {
+      projectId: parsed.project_id,
+      clientEmail: parsed.client_email,
+      privateKey: parsed.private_key?.replace(/\\n/g, "\n"),
+    };
+  } catch (error) {
+    throw new Error(
+      `FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON: ${
+        error instanceof Error ? error.message : "unknown parse error"
+      }`,
+    );
+  }
+}
+
+function serviceAccountFromSplitEnv(): ServiceAccount {
+  return {
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
+  };
+}
 
 function adminApp(): App {
   if (getApps().length) return getApp();
   if (!isAdminConfigured) {
     throw new Error(
-      "Firebase Admin is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY.",
+      "Firebase Admin is not configured. Set FIREBASE_SERVICE_ACCOUNT_JSON, or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.",
     );
   }
   return initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, "\n"),
-    }),
+    credential: cert(
+      hasServiceAccountJson ? serviceAccountFromJson() : serviceAccountFromSplitEnv(),
+    ),
   });
 }
 

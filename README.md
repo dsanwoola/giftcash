@@ -47,6 +47,7 @@ The app runs in **demo mode** out of the box — no backend required. All data
    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=...
    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
    NEXT_PUBLIC_FIREBASE_APP_ID=...
+   NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=...
    ```
 
 3. **Authentication** → enable Email/Password, Google and Phone sign-in.
@@ -58,13 +59,19 @@ The app runs in **demo mode** out of the box — no backend required. All data
    ```
 
 5. **Admin SDK** (for ledger-affecting ops) → Project settings → Service accounts
-   → generate a key, and set these server-only variables in App Hosting
-   Environment. Never commit them to GitHub:
+   → generate a key, and set the service-account JSON in App Hosting
+   Environment. Never commit it to GitHub:
+
+   ```
+   FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"...","client_email":"...","private_key":"[REDACTED PRIVATE KEY]\\n"}
+   ```
+
+   Alternatively, split the same JSON into separate server-only variables:
 
    ```
    FIREBASE_PROJECT_ID=...
    FIREBASE_CLIENT_EMAIL=...
-   FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+   FIREBASE_PRIVATE_KEY="[REDACTED PRIVATE KEY]\\n"
    ```
 
 6. **App Hosting** → connect GitHub repo `dsanwoola/giftcash`, live branch `main`,

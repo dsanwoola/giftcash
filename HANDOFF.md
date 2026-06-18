@@ -116,9 +116,16 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 NEXT_PUBLIC_FIREBASE_APP_ID
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 ```
 
-Server-only Admin SDK variables:
+Server-only Admin SDK variables, preferred as one service-account JSON value:
+
+```text
+FIREBASE_SERVICE_ACCOUNT_JSON
+```
+
+Alternative split variables:
 
 ```text
 FIREBASE_PROJECT_ID
