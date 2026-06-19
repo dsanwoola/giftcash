@@ -1,6 +1,7 @@
 # Firebase App Hosting configuration for GiftCash.
-# Secrets and environment variables are set in Firebase Console:
-# App Hosting → giftcash backend → Settings → Environment.
+# Public Firebase web config is intentionally exposed to the browser via
+# NEXT_PUBLIC_* variables. Server Admin SDK uses App Hosting default credentials;
+# do not commit service-account private keys.
 
 runConfig:
   # Keep idle cost low while the product is still early.
@@ -11,3 +12,40 @@ runConfig:
   cpu: 1
   memoryMiB: 512
   concurrency: 80
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyDROPWfSy--a_-b71XTpiVKana6kGdS98I"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "giftcash-d0f57.firebaseapp.com"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: "giftcash-d0f57"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "giftcash-d0f57.firebasestorage.app"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "520482776419"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:520482776419:web:1a27d0ce2d784e62031f56"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: "G-CPMV5VLCC6"
+    availability:
+      - BUILD
+      - RUNTIME

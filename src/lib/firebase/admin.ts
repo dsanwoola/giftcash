@@ -1,5 +1,6 @@
 import "server-only";
 import {
+  applicationDefault,
   cert,
   getApp,
   getApps,
@@ -14,7 +15,10 @@ import { getFirestore } from "firebase-admin/firestore";
  * Firebase Admin SDK (server only). Used by API route handlers for privileged,
  * ledger-affecting operations.
  *
- * Preferred production env:
+ * Preferred production runtime on Firebase App Hosting:
+ *   Use Application Default Credentials from the backend service account.
+ *
+ * Optional explicit service account env:
  *   FIREBASE_SERVICE_ACCOUNT_JSON={"project_id":"...","client_email":"...","private_key":"-----BEGIN PRIVATE KEY-----\\n..."}
  *
  * Alternative split env:
@@ -31,8 +35,13 @@ const hasSplitServiceAccount =
   isReal(process.env.FIREBASE_PROJECT_ID) &&
   isReal(process.env.FIREBASE_CLIENT_EMAIL) &&
   isReal(process.env.FIREBASE_PRIVATE_KEY);
+const hasApplicationDefaultCredentials =
+  isReal(process.env.GOOGLE_CLOUD_PROJECT) ||
+  isReal(process.env.GCLOUD_PROJECT) ||
+  isReal(process.env.FIREBASE_CONFIG);
 
-export const isAdminConfigured = hasServiceAccountJson || hasSplitServiceAccount;
+export const isAdminConfigured =
+  hasServiceAccountJson || hasSplitServiceAccount || hasApplicationDefaultCredentials;
 
 function serviceAccountFromJson(): ServiceAccount {
   try {
@@ -67,8 +76,11 @@ function adminApp(): App {
   if (getApps().length) return getApp();
   if (!isAdminConfigured) {
     throw new Error(
-      "Firebase Admin is not configured. Set FIREBASE_SERVICE_ACCOUNT_JSON, or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.",
+      "Firebase Admin is not configured. Run on Firebase App Hosting/Google Cloud, or set FIREBASE_SERVICE_ACCOUNT_JSON, or FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.",
     );
+  }
+  if (!hasServiceAccountJson && !hasSplitServiceAccount) {
+    return initializeApp({ credential: applicationDefault() });
   }
   return initializeApp({
     credential: cert(
