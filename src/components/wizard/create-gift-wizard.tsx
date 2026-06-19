@@ -155,7 +155,7 @@ export function CreateGiftWizard() {
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-xl px-5 py-6">
+      <div className="mx-auto max-w-xl px-4 py-4 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between">
           <Logo />
           <Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link>
@@ -207,7 +207,7 @@ export function CreateGiftWizard() {
               {/* STEP 1 — Experience / Theme */}
               {step === 1 && (
                 <Section title="Choose the gift experience" subtitle="How the reveal will look and feel.">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {THEMES.filter((t) => occasion.suggestedThemes.includes(t.id))
                       .concat(THEMES.filter((t) => !occasion.suggestedThemes.includes(t.id)))
                       .map((t) => (
@@ -237,7 +237,7 @@ export function CreateGiftWizard() {
                   <Field label="Nickname (optional)">
                     <input className={inputCls} value={form.recipientNickname} onChange={(e) => set("recipientNickname", e.target.value)} placeholder="e.g. Tee" />
                   </Field>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <Field label="Phone">
                       <input className={inputCls} value={form.recipientPhone} onChange={(e) => set("recipientPhone", e.target.value)} placeholder="0803…" />
                     </Field>
@@ -258,8 +258,8 @@ export function CreateGiftWizard() {
               {/* STEP 3 — Amount */}
               {step === 3 && (
                 <Section title="How much?" subtitle="The message comes first — but let's set the amount.">
-                  <div className="flex gap-2">
-                    <select className={`${inputCls} w-28`} value={form.currency} onChange={(e) => set("currency", e.target.value as CurrencyCode)}>
+                  <div className="grid gap-2 sm:flex">
+                    <select className={`${inputCls} sm:w-28`} value={form.currency} onChange={(e) => set("currency", e.target.value as CurrencyCode)}>
                       {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}
                     </select>
                     <input className={`${inputCls} text-2xl font-semibold`} inputMode="numeric" value={form.amount} onChange={(e) => set("amount", e.target.value.replace(/[^0-9.]/g, ""))} />
@@ -354,11 +354,11 @@ export function CreateGiftWizard() {
 
         {/* Nav */}
         {!created && step < 6 && (
-          <div className="mt-8 flex items-center justify-between">
+          <div className="sticky bottom-0 -mx-4 mt-8 flex items-center justify-between gap-3 border-t border-ink/5 bg-cream/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
             <Button variant="ghost" onClick={back} disabled={step === 0}>
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
-            <Button onClick={next} disabled={!canNext}>
+            <Button onClick={next} disabled={!canNext} className="min-w-28">
               Next <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -444,7 +444,7 @@ function Confirmation({ gift }: { gift: Gift }) {
         </Button>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noopener noreferrer">
           <Button variant="primary" className="w-full">Share to WhatsApp</Button>
         </a>
@@ -459,13 +459,13 @@ function Confirmation({ gift }: { gift: Gift }) {
 
 /* ---------------- small UI helpers ---------------- */
 const inputCls =
-  "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 outline-none focus:border-brand";
+  "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
 
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="font-display text-2xl font-semibold">{title}</h1>
+        <h1 className="text-balance font-display text-2xl font-semibold">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
       </div>
       {children}
@@ -486,7 +486,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
   return (
     <button
       onClick={onClick}
-      className={`rounded-full border px-3.5 py-1.5 text-sm capitalize transition ${active ? "border-brand bg-brand text-white" : "border-ink/10 bg-white hover:border-brand/40"}`}
+      className={`min-h-10 rounded-full border px-3.5 py-2 text-sm capitalize transition ${active ? "border-brand bg-brand text-white" : "border-ink/10 bg-white hover:border-brand/40"}`}
     >
       {children}
     </button>
@@ -497,7 +497,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
   return (
     <button
       onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm"
+      className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm"
     >
       <span>{label}</span>
       <span className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-brand" : "bg-ink/15"}`}>

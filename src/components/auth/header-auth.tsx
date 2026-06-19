@@ -21,7 +21,7 @@ export function HeaderAuth() {
   return (
     <div className="flex items-center gap-2">
       <Link href="/login" className="text-sm text-muted hover:text-ink">Sign in</Link>
-      <ButtonLink href="/gift/create" size="sm" variant="primary">Send a Gift</ButtonLink>
+      <ButtonLink href="/gift/create" size="sm" variant="primary" className="px-3 sm:px-4"><span className="sm:hidden">Send</span><span className="hidden sm:inline">Send a Gift</span></ButtonLink>
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { repo } from "@/lib/data/repo";
 import { useAuth } from "@/lib/auth/auth-context";
 import type { CurrencyCode, EventType, GiftEvent } from "@/lib/types";
 
-const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 outline-none focus:border-brand";
+const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
 
 const TYPES: { id: EventType; emoji: string; label: string; gradient: [string, string] }[] = [
   { id: "wedding", emoji: "💍", label: "Wedding", gradient: ["#2e1065", "#e6b143"] },
@@ -91,14 +91,14 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-lg px-5 py-6">
+      <div className="mx-auto max-w-lg px-4 py-4 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link></div>
-        <h1 className="mt-8 font-display text-3xl font-semibold">Create an event gift page 💍</h1>
+        <h1 className="mt-8 text-balance font-display text-2xl font-semibold sm:text-3xl">Create an event gift page 💍</h1>
         <p className="mt-1 text-sm text-muted">Perfect for weddings &amp; ceremonies. Share it so guests can send cash from anywhere.</p>
 
         <div className="mt-6 space-y-4">
           <Field label="Event type">
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {TYPES.map((t) => (
                 <button key={t.id} onClick={() => setType(t.id)} className={`flex flex-col items-center gap-1 rounded-2xl border p-3 text-xs ${type === t.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white"}`}>
                   <span className="text-xl">{t.emoji}</span>{t.label}
@@ -108,7 +108,7 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           </Field>
           <Field label="Celebrant name(s) *"><input className={inputCls} value={celebrants} onChange={(e) => setCelebrants(e.target.value)} placeholder="e.g. Tunde & Zainab" /></Field>
           <Field label="Page title (optional)"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The wedding of Tunde & Zainab" /></Field>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Event date *"><input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} /></Field>
             <Field label="Currency">
               <select className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
@@ -118,12 +118,12 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           </div>
           <Field label="Fundraising goal (optional)"><input className={inputCls} inputMode="numeric" value={goal} onChange={(e) => setGoal(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="e.g. 500000 — shows a goal thermometer on the big screen" /></Field>
           <Field label="Story / welcome note (optional)"><textarea rows={3} className={inputCls} value={story} onChange={(e) => setStory(e.target.value)} placeholder="A warm note for your guests…" /></Field>
-          <button onClick={() => setShowTotal((v) => !v)} className="flex w-full items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
+          <button onClick={() => setShowTotal((v) => !v)} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
             <span>👁️ Show total received to guests</span>
             <span className={`relative h-6 w-11 rounded-full transition ${showTotal ? "bg-brand" : "bg-ink/15"}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${showTotal ? "left-[22px]" : "left-0.5"}`} /></span>
           </button>
 
-          <button onClick={() => setCampaignMode((v) => !v)} className="flex w-full items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
+          <button onClick={() => setCampaignMode((v) => !v)} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
             <span>🏛️ Campaign mode (donor info + caps)</span>
             <span className={`relative h-6 w-11 rounded-full transition ${campaignMode ? "bg-brand" : "bg-ink/15"}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${campaignMode ? "left-[22px]" : "left-0.5"}`} /></span>
           </button>
@@ -153,7 +153,7 @@ function SuccessShare({ event }: { event: GiftEvent }) {
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-lg px-5 py-6">
+      <div className="mx-auto max-w-lg px-4 py-4 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link></div>
 
         <div className="mt-8 text-center">
@@ -178,7 +178,7 @@ function SuccessShare({ event }: { event: GiftEvent }) {
           />
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <ButtonLink href={`/event/${event.slug}`} variant="outline" className="w-full">View event page</ButtonLink>
           <ButtonLink href="/dashboard" variant="gold" className="w-full">Done</ButtonLink>
         </div>

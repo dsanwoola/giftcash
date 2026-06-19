@@ -48,25 +48,25 @@ export default function Home() {
               "radial-gradient(60% 50% at 80% 0%, #ede4ff 0%, transparent 60%), radial-gradient(50% 40% at 0% 20%, #fbeecb 0%, transparent 55%)",
           }}
         />
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-16 md:grid-cols-2 md:py-24">
-          <div className="animate-rise">
-            <span className="inline-flex items-center gap-2 rounded-full border border-brand/15 bg-white/60 px-4 py-1.5 text-xs font-medium text-brand">
+        <div className="mx-auto grid max-w-6xl items-center gap-9 px-4 py-10 sm:px-5 sm:py-14 md:grid-cols-2 md:gap-12 md:py-24">
+          <div className="animate-rise text-center md:text-left">
+            <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-brand/15 bg-white/60 px-3 py-1.5 text-center text-xs font-medium text-brand sm:px-4">
               <Sparkles className="h-3.5 w-3.5" /> Digital cash gifting, reimagined
             </span>
-            <h1 className="mt-5 font-display text-5xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
+            <h1 className="mt-5 text-balance font-display text-4xl font-semibold leading-[1.03] tracking-tight sm:text-5xl md:text-6xl">
               Don&apos;t just send money.{" "}
               <span className="text-gradient">Send a moment.</span>
             </h1>
-            <p className="mt-5 max-w-md text-lg text-muted">
+            <p className="mx-auto mt-5 max-w-md text-base leading-7 text-muted sm:text-lg md:mx-0">
               Gift Cash turns ordinary cash gifts into beautiful digital experiences
               for birthdays, weddings, graduations, Valentine&apos;s Day, and every
               celebration that matters.
             </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <ButtonLink href="/gift/create" size="lg" variant="primary">
+            <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center md:justify-start">
+              <ButtonLink href="/gift/create" size="lg" variant="primary" className="w-full sm:w-auto">
                 Send a Gift Cash <ArrowRight className="h-4 w-4" />
               </ButtonLink>
-              <ButtonLink href="/gift/tolu-birthday" size="lg" variant="outline">
+              <ButtonLink href="/gift/tolu-birthday" size="lg" variant="outline" className="w-full sm:w-auto">
                 See a live reveal
               </ButtonLink>
             </div>
@@ -76,9 +76,9 @@ export default function Home() {
           </div>
 
           {/* Floating gift card preview */}
-          <div className="relative mx-auto w-full max-w-sm">
+          <div className="relative mx-auto w-full max-w-[20rem] sm:max-w-sm">
             <div className="animate-float rounded-[2rem] bg-gradient-to-br from-brand to-brand-deep p-1 shadow-lift">
-              <div className="rounded-[1.85rem] bg-ink/95 p-7 text-cream">
+              <div className="rounded-[1.85rem] bg-ink/95 p-5 text-cream sm:p-7">
                 <div className="flex items-center justify-between text-xs text-cream/60">
                   <span>GIFT CASH</span>
                   <span>🎂 Birthday</span>
@@ -104,7 +104,7 @@ export default function Home() {
       </section>
 
       {/* Occasions */}
-      <section id="occasions" className="mx-auto max-w-6xl px-5 py-12">
+      <section id="occasions" className="mx-auto max-w-6xl px-4 py-10 sm:px-5 sm:py-12">
         <h2 className="font-display text-2xl font-semibold">For every celebration</h2>
         <div className="mt-6 flex gap-3 overflow-x-auto pb-3 no-scrollbar">
           {OCCASIONS.filter((o) => o.id !== "custom").map((o) => (
@@ -127,14 +127,14 @@ export default function Home() {
       </section>
 
       {/* How it works */}
-      <section id="how" className="mx-auto max-w-6xl px-5 py-16">
+      <section id="how" className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16">
         <div className="text-center">
-          <h2 className="font-display text-3xl font-semibold">How it works</h2>
+          <h2 className="font-display text-2xl font-semibold sm:text-3xl">How it works</h2>
           <p className="mt-2 text-muted">Three steps to a moment they&apos;ll never forget.</p>
         </div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">
           {steps.map((s) => (
-            <div key={s.n} className="rounded-3xl border border-ink/5 bg-white/70 p-7 shadow-soft">
+            <div key={s.n} className="rounded-3xl border border-ink/5 bg-white/70 p-5 shadow-soft sm:p-7">
               <span className="gold-foil font-display text-4xl font-semibold">{s.n}</span>
               <h3 className="mt-3 text-lg font-semibold">{s.title}</h3>
               <p className="mt-2 text-sm text-muted">{s.body}</p>
@@ -144,8 +144,8 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section id="features" className="mx-auto max-w-6xl px-5 py-16">
-        <h2 className="font-display text-3xl font-semibold">Everything a cash gift should be</h2>
+      <section id="features" className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16">
+        <h2 className="text-balance font-display text-2xl font-semibold sm:text-3xl">Everything a cash gift should be</h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => {
             const card = (
@@ -163,7 +163,7 @@ export default function Home() {
                 {f.href && <p className="mt-3 text-sm font-medium text-brand">See it live →</p>}
               </>
             );
-            const cls = "relative block rounded-3xl border border-ink/5 bg-white/70 p-6 shadow-soft";
+            const cls = "relative block rounded-3xl border border-ink/5 bg-white/70 p-5 shadow-soft sm:p-6";
             return f.href ? (
               <Link key={f.title} href={f.href} className={`${cls} transition hover:-translate-y-1`}>{card}</Link>
             ) : (
@@ -174,19 +174,19 @@ export default function Home() {
       </section>
 
       {/* CTA band */}
-      <section className="mx-auto max-w-6xl px-5 pb-20">
-        <div className="overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-brand via-brand-deep to-ink p-10 text-center text-cream shadow-lift md:p-16">
-          <h2 className="font-display text-3xl font-semibold md:text-4xl">
+      <section className="mx-auto max-w-6xl px-4 pb-16 sm:px-5 sm:pb-20">
+        <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-brand via-brand-deep to-ink p-6 text-center text-cream shadow-lift sm:p-10 md:rounded-[2.5rem] md:p-16">
+          <h2 className="font-display text-2xl font-semibold sm:text-3xl md:text-4xl">
             Ready to send a moment?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-cream/70">
             Create your first Gift Cash in under two minutes. Free to try.
           </p>
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <ButtonLink href="/gift/create" size="lg" variant="gold">
+          <div className="mt-7 grid gap-3 sm:flex sm:flex-wrap sm:justify-center">
+            <ButtonLink href="/gift/create" size="lg" variant="gold" className="w-full sm:w-auto">
               Send a Gift Cash
             </ButtonLink>
-            <ButtonLink href="/gift/tolu-birthday" size="lg" variant="outline" className="border-white/30 bg-white/10 text-cream hover:bg-white/20">
+            <ButtonLink href="/gift/tolu-birthday" size="lg" variant="outline" className="w-full border-white/30 bg-white/10 text-cream hover:bg-white/20 sm:w-auto">
               See the reveal
             </ButtonLink>
           </div>

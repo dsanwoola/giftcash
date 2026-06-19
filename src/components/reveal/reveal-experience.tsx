@@ -98,7 +98,7 @@ export function RevealExperience({ slug }: { slug: string }) {
         background: `radial-gradient(120% 80% at 50% -10%, ${occasion.gradient[0]}26, transparent 60%), radial-gradient(90% 60% at 50% 110%, ${occasion.gradient[1]}22, transparent 55%)`,
       }}
     >
-      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-5 py-6">
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 py-5 sm:px-5 sm:py-6">
         <div className="flex justify-center">
           <Logo />
         </div>
@@ -115,7 +115,7 @@ export function RevealExperience({ slug }: { slug: string }) {
                 className="flex w-full flex-col items-center text-center"
               >
                 <p className="text-sm font-medium text-muted">{occasion.emoji} {occasion.label}</p>
-                <h1 className="mt-2 font-display text-3xl font-semibold leading-tight">
+                <h1 className="mt-2 text-balance font-display text-2xl font-semibold leading-tight sm:text-3xl">
                   {gift.recipientNickname || gift.recipientName}, <br />
                   {senderLabel} sent you a special Gift Cash
                 </h1>
@@ -188,7 +188,7 @@ export function RevealExperience({ slug }: { slug: string }) {
                   <Button onClick={() => setStage("claim")} size="lg" variant="primary" className="w-full">
                     <Wallet className="h-5 w-5" /> Claim to Gift Cash wallet
                   </Button>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <ThankYouButton slug={slug} sender={senderLabel} existing={gift.thankYou?.message} />
                     <ShareButton recipient={gift.recipientName} />
                   </div>
@@ -299,7 +299,7 @@ function AmountReveal({ value, currency }: { value: number; currency: Gift["curr
       initial={{ scale: 0.6 }}
       animate={{ scale: 1 }}
       transition={{ type: "spring", stiffness: 200, damping: 14 }}
-      className="gold-foil mt-2 font-display text-6xl font-semibold"
+      className="gold-foil mt-2 break-words font-display text-5xl font-semibold sm:text-6xl"
     >
       {formatMoney(display, currency)}
     </motion.p>
@@ -353,7 +353,7 @@ function ClaimForm({ gift, onClaimed }: { gift: Gift; onClaimed: (g: Gift) => vo
               value={contact}
               onChange={(e) => setContact(e.target.value)}
               placeholder="e.g. 0803 000 0000"
-              className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 outline-none focus:border-brand"
+              className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand"
             />
             <Button onClick={sendOtp} size="lg" className="w-full">Continue</Button>
           </div>
@@ -408,7 +408,7 @@ function Claimed({ gift, slug, senderLabel }: { gift: Gift; slug: string; sender
         <Link href="/dashboard/withdraw" className="block">
           <Button size="lg" variant="outline" className="w-full">Withdraw to bank</Button>
         </Link>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <ThankYouButton slug={slug} sender={senderLabel} existing={gift.thankYou?.message} />
           <ShareButton recipient={gift.recipientName} />
         </div>

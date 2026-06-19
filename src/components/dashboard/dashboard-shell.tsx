@@ -72,21 +72,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="flex items-center justify-between border-b border-ink/5 bg-white/60 px-5 py-3 md:hidden">
+      <header className="flex items-center justify-between border-b border-ink/5 bg-white/60 px-4 py-3 md:hidden">
         <Logo />
         <ButtonLink href="/gift/create" size="sm"><Plus className="h-4 w-4" /> New</ButtonLink>
       </header>
 
       <main className="flex-1">
-        <div className="mx-auto max-w-3xl px-5 py-8">{children}</div>
+        <div className="mx-auto max-w-3xl px-4 py-6 pb-24 sm:px-5 sm:py-8 md:pb-8">{children}</div>
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-ink/5 bg-white/90 py-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-ink/5 bg-white/90 px-1 pb-[calc(0.5rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {nav.map((n) => {
           const active = pathname === n.href;
           return (
-            <Link key={n.href} href={n.href} className={cn("flex flex-col items-center gap-0.5 px-3 py-1 text-[11px]", active ? "text-brand" : "text-muted")}>
+            <Link key={n.href} href={n.href} className={cn("flex min-w-0 flex-1 flex-col items-center gap-0.5 px-1 py-1 text-[10px] sm:text-[11px]", active ? "text-brand" : "text-muted")}>
               <n.icon className="h-5 w-5" /> {n.label}
             </Link>
           );

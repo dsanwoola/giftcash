@@ -55,18 +55,18 @@ export function EventPage({ slug }: { slug: string }) {
   return (
     <div className="min-h-dvh bg-cream">
       {/* Banner */}
-      <div className="relative px-5 pt-6 pb-16 text-cream" style={{ background: `linear-gradient(150deg, ${event.gradient[0]}, ${event.gradient[1]})` }}>
+      <div className="relative px-4 pb-14 pt-5 text-cream sm:px-5 sm:pb-16 sm:pt-6" style={{ background: `linear-gradient(150deg, ${event.gradient[0]}, ${event.gradient[1]})` }}>
         <div className="mx-auto max-w-lg">
           <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-cream/80 hover:text-cream">Dashboard</Link></div>
           <div className="mt-10 text-center">
             <span className="rounded-full bg-white/15 px-3 py-1 text-xs">{meta.emoji} {meta.label}</span>
-            <h1 className="mt-4 font-display text-4xl font-semibold leading-tight">{event.celebrants}</h1>
+            <h1 className="mt-4 text-balance font-display text-3xl font-semibold leading-tight sm:text-4xl">{event.celebrants}</h1>
             <p className="mt-2 inline-flex items-center gap-1.5 text-cream/85"><CalendarDays className="h-4 w-4" /> {dateStr}</p>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto -mt-10 max-w-lg px-5 pb-12">
+      <div className="mx-auto -mt-10 max-w-lg px-4 pb-12 sm:px-5">
         {/* Gift CTA card */}
         <div className="rounded-3xl border border-ink/5 bg-white p-6 text-center shadow-lift">
           <span className="grid mx-auto h-14 w-14 place-items-center rounded-2xl bg-brand-soft text-brand"><Gift className="h-6 w-6" /></span>
@@ -75,16 +75,16 @@ export function EventPage({ slug }: { slug: string }) {
           {table && <p className="mt-2 inline-block rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand">📍 You&apos;re at Table {table}</p>}
           {event.campaignMode && <p className="mt-3 rounded-xl bg-gold-soft px-3 py-2 text-xs text-ink/70">🏛️ Campaign donation — your name is required{event.maxContribution ? `, up to ${formatMoney(event.maxContribution, event.currency)}` : ""}. By donating you confirm you&apos;re an eligible contributor.</p>}
           {event.showTotal && <p className="mt-3 font-display text-2xl font-semibold text-emerald">{formatMoney(total, event.currency)} received</p>}
-          <div className="mt-5 flex gap-3">
+          <div className="mt-5 grid gap-3 sm:flex">
             <Button onClick={() => setSheet(true)} size="lg" className="flex-1">Gift cash</Button>
-            <Button variant="outline" size="lg" onClick={() => setShareOpen(true)}><Share2 className="h-4 w-4" /> Share</Button>
+            <Button variant="outline" size="lg" onClick={() => setShareOpen(true)} className="w-full sm:w-auto"><Share2 className="h-4 w-4" /> Share</Button>
           </div>
         </div>
 
         {event.story && <p className="mt-5 rounded-2xl bg-white/70 p-5 text-center text-sm text-muted">{event.story}</p>}
 
         {/* Venue QR */}
-        <div className="mt-5 flex items-center gap-4 rounded-3xl border border-ink/5 bg-white/70 p-5">
+        <div className="mt-5 flex items-center gap-4 rounded-3xl border border-ink/5 bg-white/70 p-4 sm:p-5">
           <div className="rounded-2xl bg-white p-2 shadow-soft"><QRCodeSVG value={url} size={92} fgColor="#1b1226" /></div>
           <div>
             <p className="font-medium">Scan at the venue</p>
@@ -96,7 +96,7 @@ export function EventPage({ slug }: { slug: string }) {
         <div className="mt-5 rounded-3xl border border-brand/15 bg-brand-soft/40 p-5">
           <p className="flex items-center gap-2 text-sm font-semibold text-brand"><MonitorPlay className="h-4 w-4" /> Host tools</p>
           <p className="mt-1 text-sm text-muted">Run the live big-screen, control it from your phone, and print per-table QR codes.</p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <ButtonLink href={`/event/${slug}/live`} variant="dark" className="w-full"><MonitorPlay className="h-4 w-4" /> Big screen</ButtonLink>
             <ButtonLink href={`/event/${slug}/host`} variant="primary" className="w-full"><Settings2 className="h-4 w-4" /> Host console</ButtonLink>
             <ButtonLink href={`/event/${slug}/tables`} variant="outline" className="w-full"><QrCode className="h-4 w-4" /> Table QRs</ButtonLink>
