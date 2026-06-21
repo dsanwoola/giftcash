@@ -155,7 +155,7 @@ export function CreateGiftWizard() {
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-xl px-4 py-4 sm:px-5 sm:py-6">
+      <div className="mx-auto max-w-xl px-4 py-4 pb-28 sm:px-5 sm:py-6 sm:pb-6">
         <div className="flex items-center justify-between">
           <Logo />
           <Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link>
@@ -194,7 +194,7 @@ export function CreateGiftWizard() {
                       <button
                         key={o.id}
                         onClick={() => { set("occasion", o.id); set("theme", o.defaultTheme); }}
-                        className={`flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition ${form.occasion === o.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white hover:border-brand/40"}`}
+                        className={`flex min-h-24 flex-col items-start gap-2 rounded-2xl border p-4 text-left transition ${form.occasion === o.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white hover:border-brand/40"}`}
                       >
                         <span className="text-2xl">{o.emoji}</span>
                         <span className="text-sm font-medium">{o.label}</span>
@@ -214,7 +214,7 @@ export function CreateGiftWizard() {
                         <button
                           key={t.id}
                           onClick={() => set("theme", t.id)}
-                          className={`relative flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition ${form.theme === t.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white hover:border-brand/40"}`}
+                          className={`relative flex min-h-28 flex-col items-start gap-1 rounded-2xl border p-4 text-left transition ${form.theme === t.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white hover:border-brand/40"}`}
                         >
                           {t.premium && (
                             <span className="absolute right-2 top-2 rounded-full bg-gold-soft px-2 py-0.5 text-[9px] font-semibold text-ink/70">PREMIUM</span>
@@ -354,11 +354,11 @@ export function CreateGiftWizard() {
 
         {/* Nav */}
         {!created && step < 6 && (
-          <div className="sticky bottom-0 -mx-4 mt-8 flex items-center justify-between gap-3 border-t border-ink/5 bg-cream/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
-            <Button variant="ghost" onClick={back} disabled={step === 0}>
+          <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 border-t border-ink/5 bg-cream/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mt-8 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+            <Button variant="ghost" onClick={back} disabled={step === 0} className="flex-1 sm:flex-none">
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
-            <Button onClick={next} disabled={!canNext} className="min-w-28">
+            <Button onClick={next} disabled={!canNext} className="flex-1 sm:min-w-28 sm:flex-none">
               Next <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
@@ -437,9 +437,9 @@ function Confirmation({ gift }: { gift: Gift }) {
         <QRCodeSVG value={url} size={160} fgColor="#1b1226" bgColor="#ffffff" />
       </div>
 
-      <div className="mt-5 flex items-center gap-2 rounded-2xl border border-ink/10 bg-white p-2 pl-4">
+      <div className="mt-5 grid gap-2 rounded-2xl border border-ink/10 bg-white p-2 sm:flex sm:items-center sm:pl-4">
         <span className="flex-1 truncate text-left text-sm text-muted">{url}</span>
-        <Button size="sm" variant="outline" onClick={copy}>
+        <Button size="sm" variant="outline" onClick={copy} className="w-full sm:w-auto">
           <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy"}
         </Button>
       </div>
@@ -509,7 +509,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
-    <div className="flex justify-between">
+    <div className="flex flex-wrap items-center justify-between gap-2">
       <span className="text-muted">{label}</span>
       <span className={bold ? "font-semibold" : ""}>{value}</span>
     </div>

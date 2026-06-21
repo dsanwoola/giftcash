@@ -27,7 +27,7 @@ export default function DashboardHome() {
 
   return (
     <DashboardShell>
-      <div className="flex items-end justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-sm text-muted">Welcome back 👋</p>
           <h1 className="font-display text-3xl font-semibold">Your celebrations</h1>
@@ -50,7 +50,7 @@ export default function DashboardHome() {
       </div>
 
       {/* Stats */}
-      <div className="mt-5 grid grid-cols-3 gap-3">
+      <div className="mt-5 grid grid-cols-3 gap-2 sm:gap-3">
         <Stat label="Gifts sent" value={sent?.length ?? 0} icon={GiftIcon} />
         <Stat label="Claimed" value={(sent ?? []).filter((g) => g.status === "claimed").length} icon={Wallet} />
         <Stat label="Thank-yous" value={thankYous.length} icon={Heart} />
@@ -124,10 +124,10 @@ export default function DashboardHome() {
 
 function Stat({ label, value, icon: Icon }: { label: string; value: number; icon: React.ElementType }) {
   return (
-    <div className="rounded-2xl border border-ink/5 bg-white/70 p-4">
+    <div className="rounded-2xl border border-ink/5 bg-white/70 p-3 sm:p-4">
       <Icon className="h-4 w-4 text-brand" />
-      <p className="mt-2 font-display text-2xl font-semibold">{value}</p>
-      <p className="text-xs text-muted">{label}</p>
+      <p className="mt-2 font-display text-xl font-semibold sm:text-2xl">{value}</p>
+      <p className="text-[11px] leading-tight text-muted sm:text-xs">{label}</p>
     </div>
   );
 }

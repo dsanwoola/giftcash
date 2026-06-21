@@ -8,7 +8,7 @@ import { useRepoData } from "@/lib/data/use-repo";
 import { repo } from "@/lib/data/repo";
 import { formatMoney, toMinor } from "@/lib/money";
 
-const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 outline-none focus:border-brand";
+const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
 
 export default function WithdrawPage() {
   const { data: wallet } = useRepoData(() => repo.getWallet());
@@ -66,11 +66,11 @@ export default function WithdrawPage() {
         Available: <b>{wallet ? formatMoney(wallet.available, wallet.currency) : "—"}</b>
       </p>
 
-      <div className="mt-6 max-w-md space-y-4">
+      <div className="mt-6 max-w-md space-y-4 pb-6">
         {step === "form" && (
           <>
             <Labeled label="Bank name"><input className={inputCls} value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="e.g. GTBank" /></Labeled>
-            <Labeled label="Account number"><input className={inputCls} inputMode="numeric" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} placeholder="0123456789" /></Labeled>
+            <Labeled label="Account number"><input className={inputCls} inputMode="numeric" value={accountNumber} onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="0123456789" /></Labeled>
             <Labeled label="Account name"><input className={inputCls} value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Account holder name" /></Labeled>
             <Labeled label="Amount"><input className={inputCls} inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0" /></Labeled>
             {error && <p className="text-sm text-pink">{error}</p>}
@@ -86,7 +86,7 @@ export default function WithdrawPage() {
               <Row label="Account number" value={accountNumber} />
               <Row label="Account name" value={accountName} />
             </div>
-            <div className="flex gap-3">
+            <div className="grid gap-3 sm:flex">
               <Button variant="outline" className="flex-1" onClick={() => setStep("form")}>Edit</Button>
               <Button className="flex-1" onClick={submit}>Confirm</Button>
             </div>
@@ -105,5 +105,5 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
   return <label className="block space-y-1.5"><span className="text-sm text-muted">{label}</span>{children}</label>;
 }
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return <div className="flex justify-between"><span className="text-muted">{label}</span><span className={bold ? "font-semibold" : ""}>{value}</span></div>;
+  return <div className="flex flex-wrap justify-between gap-2"><span className="text-muted">{label}</span><span className={bold ? "font-semibold" : ""}>{value}</span></div>;
 }

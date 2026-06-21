@@ -83,6 +83,12 @@ textarea {
   touch-action: manipulation;
 }
 
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
 /* Utility helpers used across the app */
 @layer utilities {
   .font-display {

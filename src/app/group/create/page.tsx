@@ -45,7 +45,7 @@ export default function CreateGroupGift() {
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-lg px-4 py-4 sm:px-5 sm:py-6">
+      <div className="mx-auto max-w-lg px-4 py-4 pb-10 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link></div>
         <h1 className="mt-8 text-balance font-display text-2xl font-semibold sm:text-3xl">Start a group gift 🤝</h1>
         <p className="mt-1 text-sm text-muted">Pool contributions from friends, family or colleagues toward one big gift.</p>
@@ -61,7 +61,7 @@ export default function CreateGroupGift() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Target amount">
               <div className="grid gap-2 sm:flex">
-                <select className={`${inputCls} sm:w-20`} value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
+                <select className={`${inputCls} sm:w-24`} value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
                   {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.symbol}</option>)}
                 </select>
                 <input className={inputCls} inputMode="numeric" value={target} onChange={(e) => setTarget(e.target.value.replace(/[^0-9.]/g, ""))} />

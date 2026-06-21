@@ -91,7 +91,7 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-lg px-4 py-4 sm:px-5 sm:py-6">
+      <div className="mx-auto max-w-lg px-4 py-4 pb-10 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link></div>
         <h1 className="mt-8 text-balance font-display text-2xl font-semibold sm:text-3xl">Create an event gift page 💍</h1>
         <p className="mt-1 text-sm text-muted">Perfect for weddings &amp; ceremonies. Share it so guests can send cash from anywhere.</p>
@@ -100,7 +100,7 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           <Field label="Event type">
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {TYPES.map((t) => (
-                <button key={t.id} onClick={() => setType(t.id)} className={`flex flex-col items-center gap-1 rounded-2xl border p-3 text-xs ${type === t.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white"}`}>
+                <button key={t.id} onClick={() => setType(t.id)} className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl border p-3 text-xs ${type === t.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white"}`}>
                   <span className="text-xl">{t.emoji}</span>{t.label}
                 </button>
               ))}
@@ -153,7 +153,7 @@ function SuccessShare({ event }: { event: GiftEvent }) {
 
   return (
     <div className="min-h-dvh bg-cream">
-      <div className="mx-auto max-w-lg px-4 py-4 sm:px-5 sm:py-6">
+      <div className="mx-auto max-w-lg px-4 py-4 pb-10 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link></div>
 
         <div className="mt-8 text-center">
