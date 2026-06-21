@@ -137,9 +137,17 @@ export const firestoreRepo: GiftRepo = {
     let available = 0;
     let pending = 0;
     for (const e of ledger) {
-      const sign = e.direction === "credit" ? 1 : -1;
-      if (e.status === "settled") available += sign * e.amount;
-      else if (e.status === "pending") pending += sign * e.amount;
+      if (e.status === "reversed") continue;
+      if (e.status === "settled") {
+        available += e.direction === "credit" ? e.amount : -e.amount;
+      } else if (e.status === "pending") {
+        if (e.direction === "debit") {
+          available -= e.amount;
+          pending += e.amount;
+        } else {
+          pending += e.amount;
+        }
+      }
     }
     return { id: `wallet-${userId}`, userId, currency: "NGN", available, pending };
   },

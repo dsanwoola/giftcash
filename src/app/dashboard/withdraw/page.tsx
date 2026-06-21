@@ -22,9 +22,12 @@ export default function WithdrawPage() {
   const amountMinor = toMinor(Number(amount) || 0);
 
   const review = () => {
-    if (!bankName || !accountNumber || !accountName) return setError("Fill in all bank details.");
-    if (amountMinor <= 0) return setError("Enter an amount.");
+    const cleanAccountNumber = accountNumber.replace(/\D/g, "");
+    if (!bankName.trim() || !accountName.trim()) return setError("Fill in all bank details.");
+    if (!/^\d{10}$/.test(cleanAccountNumber)) return setError("Enter a valid 10-digit Nigerian account number.");
+    if (amountMinor < toMinor(1_000)) return setError("Minimum withdrawal is ₦1,000.");
     if (wallet && amountMinor > wallet.available) return setError("Amount exceeds your available balance.");
+    setAccountNumber(cleanAccountNumber);
     setError("");
     setStep("review");
   };

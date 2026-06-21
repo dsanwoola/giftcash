@@ -2,7 +2,7 @@
 
 **For:** Chineye / Hermes  
 **Date:** 2026-06-18  
-**Status:** GitHub takeover complete; Firebase App Hosting account-side connection in progress.
+**Status:** Firebase App Hosting live; health check passes; payment/withdrawal ledger hardening in progress.
 
 ---
 
@@ -155,10 +155,10 @@ This matches the takeover standard: GitHub must prove the app builds before Fire
 
 ## 8. Current verified state
 
-Last verified GitHub commit:
+Current live URL:
 
 ```text
-b0d110f Configure Firebase App Hosting
+https://giftcash--giftcash-d0f57.us-central1.hosted.app
 ```
 
 Verified checks:
@@ -166,31 +166,30 @@ Verified checks:
 ```text
 npm run lint:  passed
 npm run build: passed
-GitHub CI:     passed
+/api/health:    {"adminConfigured":true,"firestoreOk":true}
 ```
 
-CI run:
+Latest implementation slice:
 
 ```text
-https://github.com/dsanwoola/giftcash/actions/runs/27698472131
+Payment/withdrawal hardening:
+- gift creation validates server-side amount/name/message fields
+- withdrawal requests validate Nigerian 10-digit account numbers and ₦1,000 minimum
+- withdrawal reservations use pending debit ledger entries so funds are locked immediately
+- admin complete/fail processing is transactional and records processedAt/processedBy
+- failed withdrawals reverse pending reservations instead of double-crediting balances
 ```
 
 ## 9. Current blocker
 
-Firebase Console reported:
+No active Firebase deployment blocker observed in this session. App Hosting backend exists and returns HTTP 200; `/api/health` reports Admin SDK and Firestore OK.
 
-```text
-We are waiting for permissions to propagate in order to create a valid connection. Please try again.
-```
+Next production blockers are business/account-side decisions, not code blockers:
 
-This happens before GiftCash code is built. It is an account/IAM/GitHub-connection propagation issue, not a code issue.
-
-Recommended action:
-
-1. Wait 5–15 minutes and retry.
-2. Confirm Firebase project is on Blaze if App Hosting requires it.
-3. Confirm Firebase/GitHub authorization can access `dsanwoola/giftcash`.
-4. If still stuck, delete the partial backend connection and recreate it with repo `dsanwoola/giftcash`, branch `main`, app root `/`.
+1. Connect a real payment provider (Paystack/Flutterwave/other) and webhook before accepting real customer funds.
+2. Decide payout operations flow: manual admin payout, bank-transfer provider API, or finance-ops queue.
+3. Add KYC/limits before allowing larger withdrawals.
+4. Add custom domain when ready for public launch.
 
 ## 10. Secrets and private data
 

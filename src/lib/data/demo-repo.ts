@@ -1,7 +1,7 @@
 "use client";
 
 import { nanoid } from "nanoid";
-import { serviceFee } from "../money";
+import { serviceFee, toMinor } from "../money";
 import type {
   BankAccount,
   Contribution,
@@ -190,9 +190,17 @@ export const demoRepo: GiftRepo = {
     let available = 0;
     let pending = 0;
     for (const e of ledger) {
-      const sign = e.direction === "credit" ? 1 : -1;
-      if (e.status === "settled") available += sign * e.amount;
-      else if (e.status === "pending") pending += sign * e.amount;
+      if (e.status === "reversed") continue;
+      if (e.status === "settled") {
+        available += e.direction === "credit" ? e.amount : -e.amount;
+      } else if (e.status === "pending") {
+        if (e.direction === "debit") {
+          available -= e.amount;
+          pending += e.amount;
+        } else {
+          pending += e.amount;
+        }
+      }
     }
     return { id: `wallet-${userId}`, userId, currency: "NGN", available, pending };
   },
@@ -205,6 +213,14 @@ export const demoRepo: GiftRepo = {
 
   async requestWithdrawal(userId, amount, bank: BankAccount) {
     const store = load();
+    if (!Number.isInteger(amount) || amount < toMinor(1_000)) throw new Error("Withdrawal amount must be at least ₦1,000.");
+    const cleanBank: BankAccount = {
+      bankName: bank.bankName.trim().replace(/\s+/g, " "),
+      accountName: bank.accountName.trim().replace(/\s+/g, " "),
+      accountNumber: bank.accountNumber.replace(/\D/g, ""),
+    };
+    if (!cleanBank.bankName || !cleanBank.accountName) throw new Error("Fill in all bank details.");
+    if (!/^\d{10}$/.test(cleanBank.accountNumber)) throw new Error("Enter a valid 10-digit Nigerian account number.");
     const wallet = await this.getWallet(userId);
     if (amount > wallet.available) throw new Error("Amount exceeds your available balance.");
     const withdrawal: Withdrawal = {
@@ -212,15 +228,17 @@ export const demoRepo: GiftRepo = {
       userId,
       amount,
       currency: "NGN",
-      bank,
+      bank: cleanBank,
       status: "pending",
       createdAt: new Date().toISOString(),
       reference: `wd-${nanoid(8)}`,
     };
     store.withdrawals.push(withdrawal);
     store.ledger.push(
-      entry(userId, "withdrawal_requested", amount, "debit", withdrawal.reference, "NGN", "settled", {
-        bank: bank.bankName,
+      entry(userId, "withdrawal_requested", amount, "debit", withdrawal.reference, "NGN", "pending", {
+        withdrawalId: withdrawal.id,
+        bank: cleanBank.bankName,
+        accountLast4: cleanBank.accountNumber.slice(-4),
       }),
     );
     save(store);
@@ -399,16 +417,37 @@ export const demoRepo: GiftRepo = {
     if (w.status !== "pending" && w.status !== "processing") {
       throw new Error("This withdrawal has already been processed.");
     }
+    const now = new Date().toISOString();
+    w.processedAt = now;
+    const reservations = store.ledger.filter(
+      (e) => e.userId === w.userId && e.reference === w.reference && e.transactionType === "withdrawal_requested",
+    );
     if (action === "complete") {
       w.status = "completed";
+      for (const reservation of reservations) {
+        if (reservation.status === "pending") reservation.status = "settled";
+      }
       store.ledger.push(
-        entry(w.userId, "withdrawal_completed", 0, "debit", w.reference, w.currency, "settled", { note: "payout settled" }),
+        entry(w.userId, "withdrawal_completed", 0, "debit", w.reference, w.currency, "settled", {
+          withdrawalId: w.id,
+          note: "payout settled",
+        }),
       );
     } else {
       w.status = "failed";
-      store.ledger.push(
-        entry(w.userId, "withdrawal_failed", w.amount, "credit", w.reference, w.currency, "settled", { note: "reversed" }),
-      );
+      let restoredLegacyDebit = false;
+      for (const reservation of reservations) {
+        if (reservation.status === "pending") reservation.status = "reversed";
+        else if (reservation.status === "settled") restoredLegacyDebit = true;
+      }
+      if (restoredLegacyDebit || reservations.length === 0) {
+        store.ledger.push(
+          entry(w.userId, "withdrawal_failed", w.amount, "credit", w.reference, w.currency, "settled", {
+            withdrawalId: w.id,
+            note: "reversed",
+          }),
+        );
+      }
     }
     save(store);
     return w;

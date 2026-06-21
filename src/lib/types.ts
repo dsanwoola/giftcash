@@ -200,6 +200,8 @@ export interface Withdrawal {
   bank: BankAccount;
   status: WithdrawalStatus;
   createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
   reference: string;
 }
 

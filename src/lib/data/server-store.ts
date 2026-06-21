@@ -62,6 +62,7 @@ function ledgerEntry(
   reference: string,
   currency: Gift["currency"] = "NGN",
   metadata?: Record<string, unknown>,
+  status: LedgerEntry["status"] = "settled",
 ): LedgerEntry {
   return {
     id: nanoid(),
@@ -72,50 +73,92 @@ function ledgerEntry(
     currency,
     direction,
     reference,
-    status: "settled",
+    status,
     metadata,
     createdAt: new Date().toISOString(),
   };
 }
 
-async function writeLedger(e: LedgerEntry) {
-  await adminDb().collection("ledger_entries").doc(e.id).set(e);
+function walletFromLedger(userId: string, entries: LedgerEntry[]): Wallet {
+  let available = 0;
+  let pending = 0;
+  for (const e of entries) {
+    if (e.status === "reversed") continue;
+    if (e.status === "settled") {
+      available += e.direction === "credit" ? e.amount : -e.amount;
+      continue;
+    }
+    // Pending debits are reserved funds: they must not remain withdrawable.
+    if (e.direction === "debit") {
+      available -= e.amount;
+      pending += e.amount;
+    } else {
+      pending += e.amount;
+    }
+  }
+  return { id: `wallet-${userId}`, userId, currency: "NGN", available, pending };
 }
 
 export async function serverWallet(userId: string): Promise<Wallet> {
   const res = await adminDb().collection("ledger_entries").where("userId", "==", userId).get();
-  let available = 0;
-  let pending = 0;
-  res.forEach((d) => {
-    const e = d.data() as LedgerEntry;
-    const sign = e.direction === "credit" ? 1 : -1;
-    if (e.status === "settled") available += sign * e.amount;
-    else if (e.status === "pending") pending += sign * e.amount;
-  });
-  return { id: `wallet-${userId}`, userId, currency: "NGN", available, pending };
+  const entries: LedgerEntry[] = [];
+  res.forEach((d) => entries.push(d.data() as LedgerEntry));
+  return walletFromLedger(userId, entries);
+}
+
+function validateMinorAmount(amount: number, label: string, min = 100_00, max = 5_000_000_00) {
+  if (!Number.isInteger(amount) || amount < min) {
+    throw new HttpError(400, `${label} must be at least ₦${Math.round(min / 100).toLocaleString("en-NG")}.`);
+  }
+  if (amount > max) {
+    throw new HttpError(400, `${label} exceeds the ₦${Math.round(max / 100).toLocaleString("en-NG")} limit.`);
+  }
+}
+
+function cleanText(value: string | undefined, label: string, min = 2, max = 80) {
+  const cleaned = value?.trim().replace(/\s+/g, " ") ?? "";
+  if (cleaned.length < min) throw new HttpError(400, `${label} is required.`);
+  if (cleaned.length > max) throw new HttpError(400, `${label} is too long.`);
+  return cleaned;
+}
+
+function validateBankAccount(bank: BankAccount): BankAccount {
+  const accountNumber = (bank.accountNumber ?? "").replace(/\D/g, "");
+  if (!/^\d{10}$/.test(accountNumber)) {
+    throw new HttpError(400, "Enter a valid 10-digit Nigerian account number.");
+  }
+  return {
+    bankName: cleanText(bank.bankName, "Bank name"),
+    accountName: cleanText(bank.accountName, "Account name"),
+    accountNumber,
+  };
 }
 
 /* ---------- Gift operations ---------- */
 
 export async function fundGift(senderUid: string, input: CreateGiftInput): Promise<Gift> {
+  validateMinorAmount(input.amount, "Gift amount");
+  const recipientName = cleanText(input.recipientName, "Recipient name");
+  const senderName = cleanText(input.senderName, "Sender name");
+  const message = cleanText(input.message, "Gift message", 1, 500);
   const fee = serviceFee(input.amount);
   const gift: Gift = {
     id: nanoid(),
-    slug: slugify(input.recipientName),
+    slug: slugify(recipientName),
     senderId: senderUid,
-    senderName: input.senderName,
+    senderName,
     anonymous: input.anonymous,
     occasion: input.occasion,
     theme: input.theme,
-    recipientName: input.recipientName,
-    recipientNickname: input.recipientNickname,
-    recipientPhone: input.recipientPhone,
-    recipientEmail: input.recipientEmail,
+    recipientName,
+    recipientNickname: input.recipientNickname?.trim() || undefined,
+    recipientPhone: input.recipientPhone?.trim() || undefined,
+    recipientEmail: input.recipientEmail?.trim() || undefined,
     amount: input.amount,
     currency: input.currency,
     serviceFee: fee,
     addOns: input.addOns,
-    message: input.message,
+    message,
     media: [],
     delivery: input.delivery,
     scheduledAt: input.scheduledAt,
@@ -222,49 +265,105 @@ export async function requestWithdrawal(
   amount: number,
   bank: BankAccount,
 ): Promise<Withdrawal> {
-  const wallet = await serverWallet(userId);
-  if (amount > wallet.available) throw new HttpError(400, "Amount exceeds your available balance.");
+  validateMinorAmount(amount, "Withdrawal amount", 1_000_00, 5_000_000_00);
+  const cleanBank = validateBankAccount(bank);
+  const db = adminDb();
+  const withdrawalRef = db.collection("withdrawals").doc();
+  const now = new Date().toISOString();
   const withdrawal: Withdrawal = {
-    id: nanoid(),
+    id: withdrawalRef.id,
     userId,
     amount,
     currency: "NGN",
-    bank,
+    bank: cleanBank,
     status: "pending",
-    createdAt: new Date().toISOString(),
+    createdAt: now,
     reference: `wd-${nanoid(8)}`,
   };
-  const db = adminDb();
-  const batch = db.batch();
-  batch.set(db.collection("withdrawals").doc(withdrawal.id), withdrawal);
-  const debit = ledgerEntry(userId, "withdrawal_requested", amount, "debit", withdrawal.reference, "NGN", {
-    bank: bank.bankName,
+
+  await db.runTransaction(async (tx) => {
+    const ledgerSnap = await tx.get(db.collection("ledger_entries").where("userId", "==", userId));
+    const entries: LedgerEntry[] = [];
+    ledgerSnap.forEach((d) => entries.push(d.data() as LedgerEntry));
+    const wallet = walletFromLedger(userId, entries);
+    if (amount > wallet.available) throw new HttpError(400, "Amount exceeds your available balance.");
+
+    const debit = ledgerEntry(
+      userId,
+      "withdrawal_requested",
+      amount,
+      "debit",
+      withdrawal.reference,
+      "NGN",
+      {
+        withdrawalId: withdrawal.id,
+        bank: cleanBank.bankName,
+        accountLast4: cleanBank.accountNumber.slice(-4),
+      },
+      "pending",
+    );
+    tx.set(withdrawalRef, withdrawal);
+    tx.set(db.collection("ledger_entries").doc(debit.id), debit);
   });
-  batch.set(db.collection("ledger_entries").doc(debit.id), debit);
-  await batch.commit();
+
   return withdrawal;
 }
 
-export async function processWithdrawal(id: string, action: "complete" | "fail"): Promise<Withdrawal> {
+export async function processWithdrawal(
+  id: string,
+  action: "complete" | "fail",
+  processedBy?: string,
+): Promise<Withdrawal> {
   const db = adminDb();
   const ref = db.collection("withdrawals").doc(id);
-  const snap = await ref.get();
-  const w = snap.data() as Withdrawal | undefined;
-  if (!w) throw new HttpError(404, "Withdrawal not found");
-  if (w.status !== "pending" && w.status !== "processing") {
-    throw new HttpError(409, "This withdrawal has already been processed.");
-  }
-  if (action === "complete") {
-    await ref.update({ status: "completed" });
-    await writeLedger(
-      ledgerEntry(w.userId, "withdrawal_completed", 0, "debit", w.reference, w.currency, { note: "payout settled" }),
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const w = snap.data() as Withdrawal | undefined;
+    if (!w) throw new HttpError(404, "Withdrawal not found");
+    if (w.status !== "pending" && w.status !== "processing") {
+      throw new HttpError(409, "This withdrawal has already been processed.");
+    }
+
+    const now = new Date().toISOString();
+    const reservationSnap = await tx.get(
+      db.collection("ledger_entries")
+        .where("userId", "==", w.userId)
+        .where("reference", "==", w.reference)
+        .where("transactionType", "==", "withdrawal_requested"),
     );
-    return { ...w, status: "completed" };
-  }
-  await ref.update({ status: "failed" });
-  // Reverse the debit so the user's balance is restored.
-  await writeLedger(
-    ledgerEntry(w.userId, "withdrawal_failed", w.amount, "credit", w.reference, w.currency, { note: "reversed" }),
-  );
-  return { ...w, status: "failed" };
+    const reservations = reservationSnap.docs.map((d) => ({ ref: d.ref, entry: d.data() as LedgerEntry }));
+
+    if (action === "complete") {
+      tx.update(ref, { status: "completed", processedAt: now, processedBy });
+      for (const reservation of reservations) {
+        if (reservation.entry.status === "pending") tx.update(reservation.ref, { status: "settled" });
+      }
+      const audit = ledgerEntry(w.userId, "withdrawal_completed", 0, "debit", w.reference, w.currency, {
+        withdrawalId: w.id,
+        processedBy,
+        note: "payout settled",
+      });
+      tx.set(db.collection("ledger_entries").doc(audit.id), audit);
+      return { ...w, status: "completed", processedAt: now, processedBy };
+    }
+
+    tx.update(ref, { status: "failed", processedAt: now, processedBy });
+    let restoredLegacyDebit = false;
+    for (const reservation of reservations) {
+      if (reservation.entry.status === "pending") {
+        tx.update(reservation.ref, { status: "reversed" });
+      } else if (reservation.entry.status === "settled") {
+        restoredLegacyDebit = true;
+      }
+    }
+    if (restoredLegacyDebit || reservations.length === 0) {
+      const reversal = ledgerEntry(w.userId, "withdrawal_failed", w.amount, "credit", w.reference, w.currency, {
+        withdrawalId: w.id,
+        processedBy,
+        note: "reversed",
+      });
+      tx.set(db.collection("ledger_entries").doc(reversal.id), reversal);
+    }
+    return { ...w, status: "failed", processedAt: now, processedBy };
+  });
 }
