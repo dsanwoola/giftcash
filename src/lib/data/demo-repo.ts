@@ -410,6 +410,15 @@ export const demoRepo: GiftRepo = {
     return Object.values(load().users).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   },
 
+  async updateUserKyc(userId, status) {
+    const store = load();
+    const user = store.users[userId];
+    if (!user) throw new Error("User profile not found");
+    user.kycStatus = status;
+    save(store);
+    return user;
+  },
+
   async processWithdrawal(id, action) {
     const store = load();
     const w = store.withdrawals.find((x) => x.id === id);
@@ -474,6 +483,7 @@ export const demoRepo: GiftRepo = {
       groupGifts: groups.length,
       events: events.length,
       contributionsValue,
+      pendingKyc: Object.values(store.users).filter((u) => u.kycStatus === "pending").length,
     };
   },
 

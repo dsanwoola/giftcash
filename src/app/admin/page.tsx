@@ -18,6 +18,7 @@ export default function AdminOverview() {
         { label: "Total users", value: stats.totalUsers },
         { label: "Withdrawals", value: stats.totalWithdrawals },
         { label: "Pending withdrawals", value: stats.pendingWithdrawals, alert: stats.pendingWithdrawals > 0 },
+        { label: "Pending KYC", value: stats.pendingKyc, alert: stats.pendingKyc > 0 },
         { label: "Failed payments", value: stats.failedPayments },
         { label: "Group gifts", value: stats.groupGifts },
         { label: "Event pages", value: stats.events },
@@ -50,6 +51,11 @@ export default function AdminOverview() {
           <p className="text-2xl">🎁</p>
           <p className="mt-2 font-medium">Manage gifts</p>
           <p className="text-xs text-cream/60">{stats?.totalGifts ?? 0} total</p>
+        </Link>
+        <Link href="/admin/users" className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
+          <p className="text-2xl">🪪</p>
+          <p className="mt-2 font-medium">Approve users/KYC</p>
+          <p className="text-xs text-cream/60">{stats?.pendingKyc ?? 0} pending review</p>
         </Link>
       </div>
     </AdminShell>

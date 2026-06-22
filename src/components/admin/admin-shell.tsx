@@ -43,21 +43,21 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar + nav */}
-      <header className="flex items-center justify-between border-b border-white/10 px-5 py-3 md:hidden">
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-ink/95 px-5 py-3 backdrop-blur md:hidden">
         <Logo className="text-cream" />
         <span className="rounded-full bg-gold/20 px-2.5 py-1 text-[10px] font-semibold text-gold">ADMIN</span>
       </header>
 
       <main className="flex-1">
-        <div className="mx-auto max-w-4xl px-5 py-8 pb-24 md:pb-8">{children}</div>
+        <div className="mx-auto max-w-4xl px-4 py-6 pb-32 sm:px-5 md:py-8 md:pb-8">{children}</div>
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-white/10 bg-ink/95 py-2 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 flex justify-around border-t border-white/10 bg-ink/95 px-1 pb-[calc(0.6rem+env(safe-area-inset-bottom))] pt-2 backdrop-blur md:hidden">
         {nav.map((n) => {
           const active = pathname === n.href;
           return (
-            <Link key={n.href} href={n.href} className={cn("flex flex-col items-center gap-0.5 px-3 py-1 text-[11px]", active ? "text-gold" : "text-cream/60")}>
-              <n.icon className="h-5 w-5" /> {n.label}
+            <Link key={n.href} href={n.href} className={cn("flex min-h-12 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 py-1 text-[10px] font-medium", active ? "bg-gold/15 text-gold" : "text-cream/60")}>
+              <n.icon className="h-5 w-5" /> <span className="truncate">{n.label}</span>
             </Link>
           );
         })}

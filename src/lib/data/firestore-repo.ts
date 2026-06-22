@@ -294,6 +294,10 @@ export const firestoreRepo: GiftRepo = {
     return u.sort(byCreatedDesc);
   },
 
+  async updateUserKyc(userId, status) {
+    return authedPost<UserProfile>(`/api/admin/users/${userId}/kyc`, { status });
+  },
+
   async processWithdrawal(id, action) {
     return authedPost<Withdrawal>(`/api/withdrawals/${id}/process`, { action });
   },
@@ -322,6 +326,7 @@ export const firestoreRepo: GiftRepo = {
       groupGifts: groups.length,
       events: events.length,
       contributionsValue,
+      pendingKyc: users.filter((u) => u.kycStatus === "pending").length,
     };
   },
 

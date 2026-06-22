@@ -11,6 +11,7 @@ import type {
   LedgerEntry,
   LedgerType,
   ThankYou,
+  UserProfile,
   Wallet,
   Withdrawal,
 } from "../types";
@@ -366,4 +367,35 @@ export async function processWithdrawal(
     }
     return { ...w, status: "failed", processedAt: now, processedBy };
   });
+}
+
+/* ---------- Admin approval operations ---------- */
+
+export async function updateUserKycStatus(
+  userId: string,
+  status: UserProfile["kycStatus"],
+  reviewedBy: string,
+): Promise<UserProfile> {
+  if (!["none", "pending", "verified", "rejected"].includes(status)) {
+    throw new HttpError(400, "Invalid KYC status.");
+  }
+  const db = adminDb();
+  const ref = db.collection("profiles").doc(userId);
+  const snap = await ref.get();
+  const profile = snap.data() as UserProfile | undefined;
+  if (!profile) throw new HttpError(404, "User profile not found");
+  const now = new Date().toISOString();
+  await db.runTransaction(async (tx) => {
+    tx.update(ref, { kycStatus: status });
+    tx.set(db.collection("admin_audit_logs").doc(), {
+      action: "kyc_status_updated",
+      targetType: "profile",
+      targetId: userId,
+      from: profile.kycStatus,
+      to: status,
+      reviewedBy,
+      createdAt: now,
+    });
+  });
+  return { ...profile, kycStatus: status };
 }

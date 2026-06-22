@@ -95,6 +95,7 @@ export interface AdminStats {
   groupGifts: number;
   events: number;
   contributionsValue: number;
+  pendingKyc: number;
 }
 
 export interface GiftRepo {
@@ -136,6 +137,7 @@ export interface GiftRepo {
   listAllGifts(): Promise<Gift[]>;
   listAllWithdrawals(): Promise<Withdrawal[]>;
   listUsers(): Promise<UserProfile[]>;
+  updateUserKyc(userId: string, status: UserProfile["kycStatus"]): Promise<UserProfile>;
   processWithdrawal(id: string, action: "complete" | "fail"): Promise<Withdrawal>;
   adminStats(): Promise<AdminStats>;
 
