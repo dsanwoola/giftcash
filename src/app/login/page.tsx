@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, friendlyAuthError } from "@/lib/auth/auth-context";
 
 const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
 
@@ -28,13 +28,13 @@ function LoginInner() {
   const go = () => router.push(next);
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setError("");
-    try { await fn(); go(); } catch (e) { setError(e instanceof Error ? e.message : "Something went wrong."); }
+    try { await fn(); go(); } catch (e) { setError(friendlyAuthError(e)); }
     finally { setBusy(false); }
   };
   const sendCode = async () => {
     setBusy(true); setError("");
     try { await startPhoneSignIn(phone); setCodeSent(true); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn't send the code."); }
+    catch (e) { setError(friendlyAuthError(e)); }
     finally { setBusy(false); }
   };
 

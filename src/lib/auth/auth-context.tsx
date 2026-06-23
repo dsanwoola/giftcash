@@ -18,6 +18,7 @@ import {
   signInWithPopup,
   signOut,
   updateProfile,
+  type AuthError,
   type ConfirmationResult,
   type User as FirebaseUser,
 } from "firebase/auth";
@@ -59,6 +60,29 @@ const mapUser = (u: FirebaseUser): AuthUser => ({
   phoneNumber: u.phoneNumber,
 });
 
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
+
+export function friendlyAuthError(error: unknown): string {
+  const code = (error as AuthError | undefined)?.code;
+  if (code === "auth/unauthorized-domain") {
+    return "Google sign-in is not allowed on this domain yet. Please try again after the domain is added in Firebase Auth.";
+  }
+  if (code === "auth/popup-blocked") {
+    return "Your browser blocked the Google sign-in popup. Allow popups for Gift Cash and try again.";
+  }
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+    return "Google sign-in was cancelled before it finished.";
+  }
+  if (code === "auth/operation-not-allowed") {
+    return "Google sign-in is not enabled yet for this Firebase project.";
+  }
+  if (code === "auth/account-exists-with-different-credential") {
+    return "An account already exists with this email. Sign in with the original method, then connect Google from your account.";
+  }
+  return error instanceof Error ? error.message : "Something went wrong.";
+}
+
 /** Create the user's profile document on first sign-in (never downgrades role). */
 async function ensureProfile(u: AuthUser) {
   const ref = doc(getDb(), "profiles", u.uid);
@@ -89,10 +113,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ----- session restore -----
   useEffect(() => {
     if (mode === "firebase") {
-      return onAuthStateChanged(getFirebaseAuth(), (u) => {
+      const timeout = window.setTimeout(() => setLoading(false), 8000);
+      const unsubscribe = onAuthStateChanged(getFirebaseAuth(), (u) => {
+        window.clearTimeout(timeout);
         setUser(u ? mapUser(u) : null);
         setLoading(false);
       });
+      return () => {
+        window.clearTimeout(timeout);
+        unsubscribe();
+      };
     }
     // demo
     try {
@@ -142,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signInWithGoogle = useCallback(async () => {
     if (mode === "firebase") {
-      const cred = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
+      const cred = await signInWithPopup(getFirebaseAuth(), googleProvider);
       await ensureProfile(mapUser(cred.user));
       return;
     }

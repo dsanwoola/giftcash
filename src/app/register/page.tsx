@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth/auth-context";
+import { useAuth, friendlyAuthError } from "@/lib/auth/auth-context";
 
 const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 outline-none focus:border-brand";
 
@@ -22,7 +22,7 @@ export default function RegisterPage() {
   const run = async (fn: () => Promise<void>) => {
     setBusy(true); setError("");
     try { await fn(); router.push("/dashboard"); }
-    catch (e) { setError(e instanceof Error ? e.message : "Something went wrong."); }
+    catch (e) { setError(friendlyAuthError(e)); }
     finally { setBusy(false); }
   };
 
