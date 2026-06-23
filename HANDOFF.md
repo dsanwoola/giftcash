@@ -172,12 +172,31 @@ npm run build: passed
 Latest implementation slice:
 
 ```text
+Payout/KYC limits and compliance:
+- users can request KYC review from settings
+- admins approve/reject KYC from the admin approvals dashboard
+- withdrawal requests enforce KYC-based per-withdrawal and daily limits server-side
+- withdrawal UI shows the user's KYC tier and payout limits before request
+- Firestore rules block users from self-changing kycStatus; KYC changes go through API/admin workflows
+```
+
+Previous implementation slices:
+
+```text
 Payment/withdrawal hardening:
 - gift creation validates server-side amount/name/message fields
 - withdrawal requests validate Nigerian 10-digit account numbers and ₦1,000 minimum
 - withdrawal reservations use pending debit ledger entries so funds are locked immediately
 - admin complete/fail processing is transactional and records processedAt/processedBy
 - failed withdrawals reverse pending reservations instead of double-crediting balances
+```
+
+```text
+Admin approvals dashboard:
+- admin overview exposes pending withdrawal and KYC queues
+- withdrawal approvals support actionable/status filters and confirmation prompts
+- user approvals support pending/verified/rejected/none filters and KYC approve/reject actions
+- KYC decisions write admin audit logs
 ```
 
 ## 9. Current blocker

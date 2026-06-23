@@ -137,6 +137,8 @@ export interface GiftRepo {
   listAllGifts(): Promise<Gift[]>;
   listAllWithdrawals(): Promise<Withdrawal[]>;
   listUsers(): Promise<UserProfile[]>;
+  getProfile(userId?: string): Promise<UserProfile | null>;
+  requestKycReview(userId?: string): Promise<UserProfile>;
   updateUserKyc(userId: string, status: UserProfile["kycStatus"]): Promise<UserProfile>;
   processWithdrawal(id: string, action: "complete" | "fail"): Promise<Withdrawal>;
   adminStats(): Promise<AdminStats>;

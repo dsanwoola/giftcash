@@ -294,6 +294,16 @@ export const firestoreRepo: GiftRepo = {
     return u.sort(byCreatedDesc);
   },
 
+  async getProfile(userId = uid()) {
+    if (!userId) return null;
+    const d = await getDoc(doc(getDb(), COL.profiles, userId));
+    return d.exists() ? (d.data() as UserProfile) : null;
+  },
+
+  async requestKycReview() {
+    return authedPost<UserProfile>("/api/profile/kyc/request");
+  },
+
   async updateUserKyc(userId, status) {
     return authedPost<UserProfile>(`/api/admin/users/${userId}/kyc`, { status });
   },

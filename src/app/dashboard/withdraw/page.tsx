@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { limitForKyc } from "@/lib/compliance/limits";
 import { useRepoData } from "@/lib/data/use-repo";
 import { repo } from "@/lib/data/repo";
 import { formatMoney, toMinor } from "@/lib/money";
@@ -12,6 +13,7 @@ const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 tex
 
 export default function WithdrawPage() {
   const { data: wallet } = useRepoData(() => repo.getWallet());
+  const { data: profile } = useRepoData(() => repo.getProfile());
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -20,12 +22,14 @@ export default function WithdrawPage() {
   const [error, setError] = useState("");
 
   const amountMinor = toMinor(Number(amount) || 0);
+  const limit = limitForKyc(profile?.kycStatus ?? "none");
 
   const review = () => {
     const cleanAccountNumber = accountNumber.replace(/\D/g, "");
     if (!bankName.trim() || !accountName.trim()) return setError("Fill in all bank details.");
     if (!/^\d{10}$/.test(cleanAccountNumber)) return setError("Enter a valid 10-digit Nigerian account number.");
     if (amountMinor < toMinor(1_000)) return setError("Minimum withdrawal is ₦1,000.");
+    if (amountMinor > limit.perWithdrawal) return setError(`Your ${limit.label} limit allows ${formatMoney(limit.perWithdrawal)} per withdrawal.`);
     if (wallet && amountMinor > wallet.available) return setError("Amount exceeds your available balance.");
     setAccountNumber(cleanAccountNumber);
     setError("");
@@ -65,6 +69,21 @@ export default function WithdrawPage() {
       <p className="mt-1 text-sm text-muted">
         Available: <b>{wallet ? formatMoney(wallet.available, wallet.currency) : "—"}</b>
       </p>
+
+      <div className="mt-5 rounded-3xl border border-ink/5 bg-white/70 p-5 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-medium">Payout limit: {limit.label}</p>
+          <span className="rounded-full bg-brand-soft px-2.5 py-1 text-xs font-semibold text-brand capitalize">KYC: {profile?.kycStatus ?? "none"}</span>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <Limit label="Per withdrawal" value={formatMoney(limit.perWithdrawal)} />
+          <Limit label="Daily limit" value={formatMoney(limit.daily)} />
+        </div>
+        <p className="mt-3 text-xs text-muted">{limit.note}</p>
+        {profile && profile.kycStatus !== "verified" && (
+          <ButtonLink href="/dashboard/settings" variant="outline" size="sm" className="mt-3 w-full sm:w-auto">Request verification</ButtonLink>
+        )}
+      </div>
 
       <div className="mt-6 max-w-md space-y-4 pb-6">
         {step === "form" && (
@@ -106,4 +125,8 @@ function Labeled({ label, children }: { label: string; children: React.ReactNode
 }
 function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return <div className="flex flex-wrap justify-between gap-2"><span className="text-muted">{label}</span><span className={bold ? "font-semibold" : ""}>{value}</span></div>;
+}
+
+function Limit({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-2xl bg-cream px-3 py-2"><p className="text-xs text-muted">{label}</p><p className="font-semibold">{value}</p></div>;
 }

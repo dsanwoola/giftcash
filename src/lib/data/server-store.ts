@@ -1,6 +1,7 @@
 import "server-only";
 import { nanoid } from "nanoid";
 import { adminAuth, adminDb } from "../firebase/admin";
+import { limitForKyc } from "../compliance/limits";
 import { serviceFee } from "../money";
 import type {
   BankAccount,
@@ -283,6 +284,26 @@ export async function requestWithdrawal(
   };
 
   await db.runTransaction(async (tx) => {
+    const profileSnap = await tx.get(db.collection("profiles").doc(userId));
+    const profile = profileSnap.data() as UserProfile | undefined;
+    const limit = limitForKyc(profile?.kycStatus ?? "none");
+    if (amount > limit.perWithdrawal) {
+      throw new HttpError(400, `Your ${limit.label} limit allows ${new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(limit.perWithdrawal / 100)} per withdrawal.`);
+    }
+
+    const withdrawalSnap = await tx.get(db.collection("withdrawals").where("userId", "==", userId));
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    let usedToday = 0;
+    withdrawalSnap.forEach((d) => {
+      const w = d.data() as Withdrawal;
+      if (["pending", "processing", "completed"].includes(w.status) && new Date(w.createdAt).getTime() >= since) {
+        usedToday += w.amount;
+      }
+    });
+    if (usedToday + amount > limit.daily) {
+      throw new HttpError(400, `This request exceeds your daily withdrawal limit. ${limit.note}`);
+    }
+
     const ledgerSnap = await tx.get(db.collection("ledger_entries").where("userId", "==", userId));
     const entries: LedgerEntry[] = [];
     ledgerSnap.forEach((d) => entries.push(d.data() as LedgerEntry));
@@ -370,6 +391,29 @@ export async function processWithdrawal(
 }
 
 /* ---------- Admin approval operations ---------- */
+
+export async function requestKycReview(userId: string): Promise<UserProfile> {
+  const db = adminDb();
+  const ref = db.collection("profiles").doc(userId);
+  const snap = await ref.get();
+  const profile = snap.data() as UserProfile | undefined;
+  if (!profile) throw new HttpError(404, "User profile not found");
+  if (profile.kycStatus === "verified") return profile;
+  const now = new Date().toISOString();
+  await db.runTransaction(async (tx) => {
+    tx.update(ref, { kycStatus: "pending" });
+    tx.set(db.collection("admin_audit_logs").doc(), {
+      action: "kyc_review_requested",
+      targetType: "profile",
+      targetId: userId,
+      from: profile.kycStatus,
+      to: "pending",
+      reviewedBy: userId,
+      createdAt: now,
+    });
+  });
+  return { ...profile, kycStatus: "pending" };
+}
 
 export async function updateUserKycStatus(
   userId: string,

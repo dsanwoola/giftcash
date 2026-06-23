@@ -1,6 +1,7 @@
 "use client";
 
 import { nanoid } from "nanoid";
+import { limitForKyc } from "../compliance/limits";
 import { serviceFee, toMinor } from "../money";
 import type {
   BankAccount,
@@ -56,6 +57,9 @@ function save(store: Store) {
 
 const slugify = (name: string) =>
   `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "gift"}-${nanoid(6)}`;
+
+const formatNaira = (minor: number) =>
+  new Intl.NumberFormat("en-NG", { style: "currency", currency: "NGN", maximumFractionDigits: 0 }).format(minor / 100);
 
 function entry(
   userId: string,
@@ -221,6 +225,14 @@ export const demoRepo: GiftRepo = {
     };
     if (!cleanBank.bankName || !cleanBank.accountName) throw new Error("Fill in all bank details.");
     if (!/^\d{10}$/.test(cleanBank.accountNumber)) throw new Error("Enter a valid 10-digit Nigerian account number.");
+    const profile = store.users[userId];
+    const limit = limitForKyc(profile?.kycStatus ?? "none");
+    if (amount > limit.perWithdrawal) throw new Error(`Your ${limit.label} limit allows ${formatNaira(limit.perWithdrawal)} per withdrawal.`);
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const usedToday = store.withdrawals
+      .filter((w) => w.userId === userId && ["pending", "processing", "completed"].includes(w.status) && +new Date(w.createdAt) >= since)
+      .reduce((sum, w) => sum + w.amount, 0);
+    if (usedToday + amount > limit.daily) throw new Error(`This request exceeds your daily withdrawal limit. ${limit.note}`);
     const wallet = await this.getWallet(userId);
     if (amount > wallet.available) throw new Error("Amount exceeds your available balance.");
     const withdrawal: Withdrawal = {
@@ -408,6 +420,20 @@ export const demoRepo: GiftRepo = {
 
   async listUsers(): Promise<UserProfile[]> {
     return Object.values(load().users).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  },
+
+  async getProfile(userId = DEMO_USER_ID) {
+    return load().users[userId] ?? null;
+  },
+
+  async requestKycReview(userId = DEMO_USER_ID) {
+    const store = load();
+    const user = store.users[userId];
+    if (!user) throw new Error("User profile not found");
+    if (user.kycStatus === "verified") return user;
+    user.kycStatus = "pending";
+    save(store);
+    return user;
   },
 
   async updateUserKyc(userId, status) {
