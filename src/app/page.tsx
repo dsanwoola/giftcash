@@ -6,6 +6,7 @@ import {
   Banknote,
   Store,
   ArrowRight,
+  MonitorPlay,
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
@@ -23,7 +24,8 @@ const features: {
   { icon: Gift, title: "Beautiful digital cash gifts", body: "Wrapped in animated boxes, envelopes and cakes — never a cold bank transfer." },
   { icon: Sparkles, title: "Surprise reveal experience", body: "A mini ceremony. The message comes first, the money is revealed last." },
   { icon: Users, title: "Group contributions", body: "Friends, family and colleagues pool together toward one big gift.", href: "/group/chidi-birthday-pool" },
-  { icon: QrCode, title: "Wedding & event QR pages", body: "Guests scan a code at the venue and send cash instantly.", href: "/event/tunde-and-zainab" },
+  { icon: QrCode, title: "Wedding & event QR pages", body: "Guests scan a code at the venue and send cash instantly.", href: "/event/create" },
+  { icon: MonitorPlay, title: "On-site / Party Mode", body: "Put Gift Cash on a big screen so every live gift explodes with name, amount, sound and confetti.", href: "/event/tunde-and-zainab/live" },
   { icon: Banknote, title: "Withdraw to bank", body: "Claim to a Gift Cash wallet, then cash out to any bank account." },
   { icon: Store, title: "Spend at merchants", body: "Coming soon — spend Gift Cash directly with partner stores.", soon: true },
 ];
@@ -65,6 +67,9 @@ export default function Home() {
             <div className="mt-8 grid gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-center md:justify-start">
               <ButtonLink href="/gift/create" size="lg" variant="primary" className="w-full sm:w-auto">
                 Send a Gift Cash <ArrowRight className="h-4 w-4" />
+              </ButtonLink>
+              <ButtonLink href="/event/create" size="lg" variant="gold" className="w-full sm:w-auto">
+                Activate event / party mode
               </ButtonLink>
               <ButtonLink href="/gift/tolu-birthday" size="lg" variant="outline" className="w-full sm:w-auto">
                 See a live reveal
