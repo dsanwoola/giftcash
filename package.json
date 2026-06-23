@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "firestore:bootstrap": "node scripts/bootstrap-firestore-schema.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -9,7 +9,7 @@ import {
   type ServiceAccount,
 } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 /**
  * Firebase Admin SDK (server only). Used by API route handlers for privileged,
@@ -89,5 +89,14 @@ function adminApp(): App {
   });
 }
 
-export const adminDb = () => getFirestore(adminApp());
+let firestoreInstance: Firestore | undefined;
+
+export function adminDb(): Firestore {
+  if (!firestoreInstance) {
+    firestoreInstance = getFirestore(adminApp());
+    firestoreInstance.settings({ ignoreUndefinedProperties: true });
+  }
+  return firestoreInstance;
+}
+
 export const adminAuth = () => getAuth(adminApp());
