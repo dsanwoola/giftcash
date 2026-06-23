@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "firestore:bootstrap": "node scripts/bootstrap-firestore-schema.mjs"
+    "firestore:bootstrap": "node scripts/bootstrap-firestore-schema.mjs",
+    "payments:simulate": "node scripts/simulate-payments.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
