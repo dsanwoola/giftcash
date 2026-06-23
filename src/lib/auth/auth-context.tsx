@@ -91,15 +91,15 @@ async function ensureProfile(u: AuthUser) {
   const profile: UserProfile = {
     id: u.uid,
     fullName: u.displayName ?? u.email?.split("@")[0] ?? "New user",
-    email: u.email ?? undefined,
-    phone: u.phoneNumber ?? undefined,
-    photoURL: u.photoURL ?? undefined,
     country: "NG",
     currency: "NGN",
     kycStatus: "none",
     role: "user",
     createdAt: new Date().toISOString(),
   };
+  if (u.email) profile.email = u.email;
+  if (u.phoneNumber) profile.phone = u.phoneNumber;
+  if (u.photoURL) profile.photoURL = u.photoURL;
   await setDoc(ref, profile);
 }
 
