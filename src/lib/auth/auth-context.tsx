@@ -83,6 +83,12 @@ export function friendlyAuthError(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
 
+function withoutUndefined<T extends object>(value: T): T {
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).filter(([, v]) => v !== undefined),
+  ) as T;
+}
+
 /** Create the user's profile document on first sign-in (never downgrades role). */
 async function ensureProfile(u: AuthUser) {
   const ref = doc(getDb(), "profiles", u.uid);
@@ -100,7 +106,7 @@ async function ensureProfile(u: AuthUser) {
   if (u.email) profile.email = u.email;
   if (u.phoneNumber) profile.phone = u.phoneNumber;
   if (u.photoURL) profile.photoURL = u.photoURL;
-  await setDoc(ref, profile);
+  await setDoc(ref, withoutUndefined(profile));
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

@@ -7,7 +7,7 @@
  */
 import { type FirebaseApp, getApp, getApps, initializeApp } from "firebase/app";
 import { type Auth, getAuth } from "firebase/auth";
-import { type Firestore, getFirestore } from "firebase/firestore";
+import { type Firestore, getFirestore, initializeFirestore } from "firebase/firestore";
 import { type FirebaseStorage, getStorage } from "firebase/storage";
 
 const config = {
@@ -47,7 +47,16 @@ export function getFirebaseAuth(): Auth {
 }
 
 export function getDb(): Firestore {
-  if (!dbInstance) dbInstance = getFirestore(ensureApp());
+  if (!dbInstance) {
+    try {
+      dbInstance = initializeFirestore(ensureApp(), { ignoreUndefinedProperties: true });
+    } catch {
+      // If another Firebase module already initialized Firestore for this app,
+      // reuse it. Profile creation also omits optional undefined fields, but this
+      // setting protects other writes from the same Firestore SDK restriction.
+      dbInstance = getFirestore(ensureApp());
+    }
+  }
   return dbInstance;
 }
 
