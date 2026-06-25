@@ -346,6 +346,8 @@ export const demoRepo: GiftRepo = {
       goalAmount: input.goalAmount,
       campaignMode: input.campaignMode,
       maxContribution: input.maxContribution,
+      settlementAccount: input.settlementAccount,
+      payoutProvider: input.payoutProvider,
       isPublic: input.isPublic,
       contributions: [],
       createdAt: new Date().toISOString(),
@@ -386,6 +388,9 @@ export const demoRepo: GiftRepo = {
       amount: contribution.amount,
       message: contribution.message,
       table: contribution.table,
+      paymentReference: `demo-${nanoid(10)}`,
+      settlementStatus: event.settlementAccount ? "forwarded" : undefined,
+      settlementAccountLast4: event.settlementAccount?.accountNumber.slice(-4),
       createdAt: new Date().toISOString(),
     };
     event.contributions.unshift(c);

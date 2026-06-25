@@ -13,7 +13,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { OCCASIONS, THEMES, occasionById, themeById } from "@/lib/occasions";
 import { CURRENCIES, formatMoney, serviceFee, toMinor } from "@/lib/money";
@@ -355,9 +355,15 @@ export function CreateGiftWizard() {
         {/* Nav */}
         {!created && step < 6 && (
           <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 border-t border-ink/5 bg-cream/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mt-8 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
-            <Button variant="ghost" onClick={back} disabled={step === 0} className="flex-1 sm:flex-none">
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Button>
+            {step === 0 ? (
+              <ButtonLink href="/" variant="ghost" className="flex-1 sm:flex-none">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </ButtonLink>
+            ) : (
+              <Button variant="ghost" onClick={back} className="flex-1 sm:flex-none">
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Button>
+            )}
             <Button onClick={next} disabled={!canNext} className="flex-1 sm:min-w-28 sm:flex-none">
               Next <ArrowRight className="h-4 w-4" />
             </Button>

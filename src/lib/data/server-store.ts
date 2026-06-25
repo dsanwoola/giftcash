@@ -250,8 +250,13 @@ export async function contributeToEvent(slug: string, data: ContributionData): P
       name: data.anonymous ? "Anonymous" : data.name?.trim() || "A guest",
       anonymous: !!data.anonymous,
       amount: data.amount,
+      paymentReference: `psk-${nanoid(12)}`,
       createdAt: new Date().toISOString(),
     };
+    if (event.settlementAccount) {
+      c.settlementStatus = "forwarded";
+      c.settlementAccountLast4 = event.settlementAccount.accountNumber.slice(-4);
+    }
     if (data.message) c.message = data.message; // omit undefined (Firestore rejects)
     if (data.table) c.table = data.table;
     const contributions = [c, ...(event.contributions ?? [])];

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Download, Gift, HelpCircle, Loader2, Lock, MonitorPlay } from "lucide-react";
+import { Download, Gift, HelpCircle, Loader2, Lock, MonitorPlay, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -98,6 +98,16 @@ export function HostConsole({ slug }: { slug: string }) {
           <div className="rounded-2xl border border-ink/5 bg-white/70 p-4"><p className="text-xs text-muted">Gifts</p><p className="font-display text-2xl font-semibold">{event.contributions.length}</p></div>
           <div className="rounded-2xl border border-ink/5 bg-white/70 p-4"><p className="text-xs text-muted">Total raised</p><p className="font-display text-2xl font-semibold">{formatMoney(total, event.currency)}</p></div>
         </div>
+
+        {event.settlementAccount && (
+          <div className="mt-3 rounded-2xl border border-emerald/20 bg-emerald/10 p-4 text-sm">
+            <p className="flex items-center gap-2 font-semibold text-emerald"><ShieldCheck className="h-4 w-4" /> Settlement route</p>
+            <p className="mt-1 text-muted">
+              {event.payoutProvider === "paystack" ? "Paystack" : "Manual"} → {event.settlementAccount.bankName} ••••{event.settlementAccount.accountNumber.slice(-4)}
+            </p>
+            <p className="mt-1 text-xs text-muted">Each payment alert is mirrored on the big screen for transparency.</p>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="mt-5 space-y-3">

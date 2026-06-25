@@ -234,6 +234,9 @@ export interface Contribution {
   amount: number; // minor units
   message?: string;
   table?: string; // optional table/seat tag (from a table QR code)
+  paymentReference?: string; // provider/reference shown to the host as the alert id
+  settlementStatus?: "pending" | "forwarded" | "failed"; // provider payout status
+  settlementAccountLast4?: string; // transparency-only; never expose full account publicly
   createdAt: string;
 }
 
@@ -258,12 +261,7 @@ export interface GroupGift {
 }
 
 /* ----- Event gifting (spec section H) ----- */
-export type EventType =
-  | "wedding"
-  | "birthday"
-  | "graduation"
-  | "naming"
-  | "anniversary";
+export type EventType = OccasionId;
 
 /** Party-screen gift sound, shared so a phone "host console" can change it live. */
 export type SoundTheme = "fanfare" | "chime" | "arcade" | "boom";
@@ -285,6 +283,8 @@ export interface GiftEvent {
   soundTheme?: SoundTheme; // big-screen gift sound (host-controllable, live)
   campaignMode?: boolean; // donor-info capture + caps (e.g. political fundraising)
   maxContribution?: number; // cap per contribution in campaign mode (minor units)
+  settlementAccount?: BankAccount; // account where event gifts are routed/settled
+  payoutProvider?: "paystack" | "manual";
   isPublic: boolean;
   contributions: Contribution[];
   createdAt: string;

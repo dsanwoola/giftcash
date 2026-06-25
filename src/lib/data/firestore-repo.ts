@@ -245,12 +245,15 @@ export const firestoreRepo: GiftRepo = {
       goalAmount: input.goalAmount,
       campaignMode: input.campaignMode,
       maxContribution: input.maxContribution,
+      settlementAccount: input.settlementAccount,
+      payoutProvider: input.payoutProvider,
       isPublic: input.isPublic,
       contributions: [],
       createdAt: new Date().toISOString(),
     };
-    await setDoc(doc(getDb(), COL.events, event.slug), event);
-    return event;
+    const cleanEvent = Object.fromEntries(Object.entries(event).filter(([, value]) => value !== undefined)) as GiftEvent;
+    await setDoc(doc(getDb(), COL.events, cleanEvent.slug), cleanEvent);
+    return cleanEvent;
   },
 
   async updateEventSettings(slug, settings) {

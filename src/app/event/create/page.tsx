@@ -10,17 +10,10 @@ import { ShareHub } from "@/components/share/share-hub";
 import { CURRENCIES, toMinor } from "@/lib/money";
 import { repo } from "@/lib/data/repo";
 import { useAuth } from "@/lib/auth/auth-context";
+import { OCCASIONS, occasionById } from "@/lib/occasions";
 import type { CurrencyCode, EventType, GiftEvent } from "@/lib/types";
 
 const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
-
-const TYPES: { id: EventType; emoji: string; label: string; gradient: [string, string] }[] = [
-  { id: "wedding", emoji: "💍", label: "Wedding", gradient: ["#2e1065", "#e6b143"] },
-  { id: "birthday", emoji: "🎂", label: "Birthday", gradient: ["#6429c9", "#f25c9e"] },
-  { id: "graduation", emoji: "🎓", label: "Graduation", gradient: ["#0ea271", "#2e1065"] },
-  { id: "naming", emoji: "👶", label: "Naming", gradient: ["#0ea271", "#e6b143"] },
-  { id: "anniversary", emoji: "🥂", label: "Anniversary", gradient: ["#6429c9", "#e6b143"] },
-];
 
 export default function CreateEventPage() {
   const { user, loading } = useAuth();
@@ -62,14 +55,22 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
   const [showTotal, setShowTotal] = useState(false);
   const [campaignMode, setCampaignMode] = useState(false);
   const [maxContribution, setMaxContribution] = useState("");
+  const [settlementBankName, setSettlementBankName] = useState("");
+  const [settlementAccountNumber, setSettlementAccountNumber] = useState("");
+  const [settlementAccountName, setSettlementAccountName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const create = async () => {
     if (!celebrants.trim()) return setError("Add the celebrant name(s).");
     if (!date) return setError("Pick the event date.");
+    const cleanAccountNumber = settlementAccountNumber.replace(/\D/g, "");
+    const hasSettlementInput = settlementBankName.trim() || cleanAccountNumber || settlementAccountName.trim();
+    if (hasSettlementInput && (!settlementBankName.trim() || !settlementAccountName.trim() || !/^\d{10}$/.test(cleanAccountNumber))) {
+      return setError("Fill the settlement bank, account name, and valid 10-digit account number.");
+    }
     setError(""); setBusy(true);
-    const chosen = TYPES.find((t) => t.id === type)!;
+    const chosen = occasionById(type);
     const event = await repo.createEvent({
       type,
       title: title.trim() || `${chosen.label} of ${celebrants.trim()}`,
@@ -82,6 +83,12 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
       goalAmount: goal ? toMinor(Number(goal)) : undefined,
       campaignMode: campaignMode || undefined,
       maxContribution: campaignMode && maxContribution ? toMinor(Number(maxContribution)) : undefined,
+      settlementAccount: hasSettlementInput ? {
+        bankName: settlementBankName.trim().replace(/\s+/g, " "),
+        accountNumber: cleanAccountNumber,
+        accountName: settlementAccountName.trim().replace(/\s+/g, " "),
+      } : undefined,
+      payoutProvider: hasSettlementInput ? "paystack" : undefined,
       isPublic: true,
       organizerName,
     });
@@ -93,18 +100,20 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
     <div className="min-h-dvh bg-cream">
       <div className="mx-auto max-w-lg px-4 py-4 pb-10 sm:px-5 sm:py-6">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted hover:text-ink">Dashboard</Link></div>
-        <h1 className="mt-8 text-balance font-display text-2xl font-semibold sm:text-3xl">Create an event gift page 💍</h1>
-        <p className="mt-1 text-sm text-muted">Perfect for weddings &amp; ceremonies. Share it so guests can send cash from anywhere.</p>
+        <h1 className="mt-8 text-balance font-display text-2xl font-semibold sm:text-3xl">Create a Party Mode event page 🎉</h1>
+        <p className="mt-1 text-sm text-muted">Perfect for weddings, birthdays, graduations and any occasion where guests can send cash gifts live.</p>
 
         <div className="mt-6 space-y-4">
           <Field label="Event type">
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-              {TYPES.map((t) => (
-                <button key={t.id} onClick={() => setType(t.id)} className={`flex min-h-20 flex-col items-center justify-center gap-1 rounded-2xl border p-3 text-xs ${type === t.id ? "border-brand bg-brand-soft" : "border-ink/10 bg-white"}`}>
-                  <span className="text-xl">{t.emoji}</span>{t.label}
-                </button>
+            <select
+              className={inputCls}
+              value={type}
+              onChange={(e) => setType(e.target.value as EventType)}
+            >
+              {OCCASIONS.map((o) => (
+                <option key={o.id} value={o.id}>{o.emoji} {o.label}</option>
               ))}
-            </div>
+            </select>
           </Field>
           <Field label="Celebrant name(s) *"><input className={inputCls} value={celebrants} onChange={(e) => setCelebrants(e.target.value)} placeholder="e.g. Tunde & Zainab" /></Field>
           <Field label="Page title (optional)"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The wedding of Tunde & Zainab" /></Field>
@@ -118,6 +127,22 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           </div>
           <Field label="Fundraising goal (optional)"><input className={inputCls} inputMode="numeric" value={goal} onChange={(e) => setGoal(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="e.g. 500000 — shows a goal thermometer on the big screen" /></Field>
           <Field label="Story / welcome note (optional)"><textarea rows={3} className={inputCls} value={story} onChange={(e) => setStory(e.target.value)} placeholder="A warm note for your guests…" /></Field>
+
+          <div className="space-y-3 rounded-3xl border border-emerald/20 bg-emerald/5 p-4">
+            <div>
+              <p className="text-sm font-semibold text-ink">Settlement account for this occasion</p>
+              <p className="mt-1 text-xs text-muted">
+                Optional for demo. When Paystack is connected, successful gifts for this event should settle/forward to this nominated account, while the live screen shows each payment alert.
+              </p>
+            </div>
+            <Field label="Bank name"><input className={inputCls} value={settlementBankName} onChange={(e) => setSettlementBankName(e.target.value)} placeholder="e.g. GTBank / Access Bank / Moniepoint" /></Field>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Account number"><input className={inputCls} inputMode="numeric" maxLength={10} value={settlementAccountNumber} onChange={(e) => setSettlementAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10 digits" /></Field>
+              <Field label="Account name"><input className={inputCls} value={settlementAccountName} onChange={(e) => setSettlementAccountName(e.target.value)} placeholder="Recipient / couple / organizer" /></Field>
+            </div>
+            <p className="text-xs text-muted">For guest transparency, only the bank name and last 4 digits are shown on host screens.</p>
+          </div>
+
           <button onClick={() => setShowTotal((v) => !v)} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
             <span>👁️ Show total received to guests</span>
             <span className={`relative h-6 w-11 rounded-full transition ${showTotal ? "bg-brand" : "bg-ink/15"}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${showTotal ? "left-[22px]" : "left-0.5"}`} /></span>

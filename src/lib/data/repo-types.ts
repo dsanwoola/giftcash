@@ -66,6 +66,8 @@ export interface CreateEventInput {
   goalAmount?: number;
   campaignMode?: boolean;
   maxContribution?: number;
+  settlementAccount?: BankAccount;
+  payoutProvider?: "paystack" | "manual";
   isPublic: boolean;
   organizerName: string;
 }

@@ -175,7 +175,7 @@ export function PartyScreen({ slug }: { slug: string }) {
       {/* Stage */}
       <main className="relative z-10 grid min-h-[calc(100dvh-200px)] place-items-center px-6">
         {celebration ? (
-          <GiftExplosion gift={celebration} currency={event.currency} showAmount={showTotal} />
+          <GiftExplosion gift={celebration} currency={event.currency} showAmount={showTotal} settlementBank={event.settlementAccount?.bankName} />
         ) : showTables ? (
           <TablesLeaderboard ranks={tableRanks} currency={event.currency} showAmount={showTotal} />
         ) : (
@@ -250,7 +250,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /* ---------------- Gift explosion ---------------- */
-function GiftExplosion({ gift, currency, showAmount }: { gift: Contribution; currency: CurrencyCode; showAmount: boolean }) {
+function GiftExplosion({ gift, currency, showAmount, settlementBank }: { gift: Contribution; currency: CurrencyCode; showAmount: boolean; settlementBank?: string }) {
   return (
     <motion.div
       key={gift.id}
@@ -295,6 +295,14 @@ function GiftExplosion({ gift, currency, showAmount }: { gift: Contribution; cur
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="mt-4 max-w-xl text-xl text-cream/70">
           “{gift.message}”
         </motion.p>
+      )}
+      {gift.paymentReference && (
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.75 }} className="mt-5 rounded-2xl border border-emerald/30 bg-emerald/15 px-5 py-3 text-sm text-cream/80 backdrop-blur">
+          <p className="font-semibold text-emerald">Payment alert received</p>
+          <p className="mt-1">
+            Ref: {gift.paymentReference}{settlementBank && gift.settlementAccountLast4 ? ` · routed to ${settlementBank} ••••${gift.settlementAccountLast4}` : ""}
+          </p>
+        </motion.div>
       )}
     </motion.div>
   );
