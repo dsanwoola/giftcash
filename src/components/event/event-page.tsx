@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { CalendarDays, Gift, HelpCircle, Loader2, MonitorPlay, QrCode, Settings2, Share2 } from "lucide-react";
+import { CalendarDays, FileSpreadsheet, Gift, HelpCircle, Loader2, MonitorPlay, QrCode, Settings2, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -100,6 +100,7 @@ export function EventPage({ slug }: { slug: string }) {
             <ButtonLink href={`/event/${slug}/live`} variant="dark" className="w-full"><MonitorPlay className="h-4 w-4" /> Big screen</ButtonLink>
             <ButtonLink href={`/event/${slug}/host`} variant="primary" className="w-full"><Settings2 className="h-4 w-4" /> Host console</ButtonLink>
             <ButtonLink href={`/event/${slug}/tables`} variant="outline" className="w-full"><QrCode className="h-4 w-4" /> Table QRs</ButtonLink>
+            <ButtonLink href={`/event/${slug}/report`} variant="gold" className="w-full"><FileSpreadsheet className="h-4 w-4" /> Gifters report</ButtonLink>
             <button onClick={() => setSetupOpen(true)} className="w-full rounded-full border border-ink/15 bg-white/70 px-4 py-2.5 text-sm hover:border-brand/40"><HelpCircle className="mr-1 inline h-4 w-4" /> Setup help</button>
           </div>
         </div>

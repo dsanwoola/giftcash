@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Gift as GiftIcon, Heart, Plus, Wallet } from "lucide-react";
+import { Gift as GiftIcon, FileSpreadsheet, Heart, Plus, Wallet } from "lucide-react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { ButtonLink } from "@/components/ui/button";
 import { useRepoData } from "@/lib/data/use-repo";
@@ -78,10 +78,15 @@ export default function DashboardHome() {
             </Link>
           ))}
           {events?.map((e) => (
-            <Link key={e.id} href={`/event/${e.slug}`} className="flex items-center justify-between rounded-2xl border border-ink/5 bg-white/60 px-4 py-3 text-sm transition hover:shadow-soft">
-              <span className="truncate">💍 {e.title}</span>
-              <span className="shrink-0 text-muted">{e.contributions.length} gifts</span>
-            </Link>
+            <div key={e.id} className="rounded-2xl border border-ink/5 bg-white/60 px-4 py-3 text-sm transition hover:shadow-soft">
+              <Link href={`/event/${e.slug}`} className="flex items-center justify-between gap-3">
+                <span className="truncate">💍 {e.title}</span>
+                <span className="shrink-0 text-muted">{e.contributions.length} gifts</span>
+              </Link>
+              <Link href={`/event/${e.slug}/report`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
+                <FileSpreadsheet className="h-3.5 w-3.5" /> Gifters report
+              </Link>
+            </div>
           ))}
         </div>
       ) : null}
