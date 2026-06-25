@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, ClipboardCopy, Clock, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CURRENCIES, formatMoney, serviceFee, toMinor } from "@/lib/money";
 import { burst } from "@/lib/confetti";
@@ -18,10 +18,28 @@ export interface ContributionInput {
   message?: string;
 }
 
+export interface BankTransferIntentView {
+  reference: string;
+  status: "pending" | "confirmed" | "review" | "expired" | "cancelled";
+  expectedAmount: number;
+  serviceFee: number;
+  totalTransferAmount: number;
+  currency: CurrencyCode;
+  expiresAt: string;
+  settlementAccount: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    alertSenderEmail: string;
+  };
+}
+
 export function ContributeSheet({
   open,
   onClose,
   onContribute,
+  onStartBankTransfer,
+  pollBankTransfer,
   currency,
   ctaLabel = "Contribute",
   requireName = false,
@@ -30,6 +48,8 @@ export function ContributeSheet({
   open: boolean;
   onClose: () => void;
   onContribute: (c: ContributionInput) => Promise<void>;
+  onStartBankTransfer?: (c: ContributionInput) => Promise<BankTransferIntentView>;
+  pollBankTransfer?: (reference: string) => Promise<Pick<BankTransferIntentView, "status"> & { reviewReason?: string }>;
   currency: CurrencyCode;
   ctaLabel?: string;
   requireName?: boolean; // campaign mode: donor name mandatory, no anonymous
@@ -40,14 +60,37 @@ export function ContributeSheet({
   const [amount, setAmount] = useState("5000");
   const [message, setMessage] = useState("");
   const [cur, setCur] = useState<CurrencyCode>(currency);
-  const [step, setStep] = useState<"form" | "paying" | "done">("form");
+  const [step, setStep] = useState<"form" | "paying" | "awaiting_bank" | "review" | "done">("form");
+  const [intent, setIntent] = useState<BankTransferIntentView | null>(null);
+  const [reviewReason, setReviewReason] = useState("");
+  const [copied, setCopied] = useState<string | null>(null);
   const [error, setError] = useState("");
   const overlay = useRef<HTMLDivElement>(null);
 
   const amountMinor = toMinor(Number(amount) || 0);
   const fee = serviceFee(amountMinor);
-
   const isAnon = requireName ? false : anonymous;
+
+  useEffect(() => {
+    if (step !== "awaiting_bank" || !intent || !pollBankTransfer) return;
+    const timer = window.setInterval(async () => {
+      try {
+        const status = await pollBankTransfer(intent.reference);
+        if (status.status === "confirmed") {
+          setStep("done");
+          burst();
+          window.clearInterval(timer);
+        } else if (status.status === "review") {
+          setReviewReason(status.reviewReason || "Your transfer alert needs admin review.");
+          setStep("review");
+          window.clearInterval(timer);
+        }
+      } catch {
+        // Keep waiting; connectivity may be temporary.
+      }
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [step, intent, pollBankTransfer]);
 
   const submit = async () => {
     if (requireName && !name.trim()) return setError("Your name is required for this event.");
@@ -56,8 +99,15 @@ export function ContributeSheet({
     if (maxAmount && amountMinor > maxAmount) return setError(`The maximum contribution is ${formatMoney(maxAmount, cur)}.`);
     setError("");
     setStep("paying");
-    await new Promise((r) => setTimeout(r, 1000)); // simulated payment
-    await onContribute({ name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined });
+    const input = { name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined };
+    if (onStartBankTransfer) {
+      const bankIntent = await onStartBankTransfer(input);
+      setIntent(bankIntent);
+      setStep("awaiting_bank");
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 1000)); // demo-only fallback for group gifts
+    await onContribute(input);
     burst();
     setStep("done");
   };
@@ -68,7 +118,15 @@ export function ContributeSheet({
     setAmount("5000");
     setMessage("");
     setAnonymous(false);
+    setIntent(null);
+    setReviewReason("");
     onClose();
+  };
+
+  const copy = async (label: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 1600);
   };
 
   return (
@@ -92,9 +150,40 @@ export function ContributeSheet({
             {step === "done" ? (
               <div className="py-6 text-center">
                 <CheckCircle2 className="mx-auto h-14 w-14 text-emerald" />
-                <h3 className="mt-3 font-display text-xl font-semibold">Thank you! 🎉</h3>
-                <p className="mt-1 text-muted">Your {formatMoney(amountMinor, cur)} contribution has been added.</p>
+                <h3 className="mt-3 font-display text-xl font-semibold">Gift confirmed 🎉</h3>
+                <p className="mt-1 text-muted">Your {formatMoney(amountMinor, cur)} contribution has been added to the event.</p>
+                {intent?.reference && <p className="mt-2 text-xs text-muted">Reference: {intent.reference}</p>}
                 <Button onClick={close} size="lg" className="mt-5 w-full">Done</Button>
+              </div>
+            ) : step === "review" ? (
+              <div className="py-6 text-center">
+                <ShieldCheck className="mx-auto h-14 w-14 text-gold" />
+                <h3 className="mt-3 font-display text-xl font-semibold">Payment sent for review</h3>
+                <p className="mt-1 text-sm text-muted">We found a bank alert, but it needs admin confirmation before it appears on the event screen.</p>
+                {reviewReason && <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-muted">{reviewReason}</p>}
+                <Button onClick={close} size="lg" className="mt-5 w-full">Done</Button>
+              </div>
+            ) : step === "awaiting_bank" && intent ? (
+              <div className="space-y-4">
+                <div className="text-center">
+                  <Clock className="mx-auto h-12 w-12 text-brand" />
+                  <h3 className="mt-3 font-display text-xl font-semibold">Transfer to complete your gift</h3>
+                  <p className="mt-1 text-sm text-muted">Use the exact reference below. GiftCash will confirm automatically when the GTBank alert arrives.</p>
+                </div>
+                <div className="rounded-3xl border border-brand/15 bg-white p-4 text-sm">
+                  <CopyRow label="Bank" value={intent.settlementAccount.bankName} onCopy={copy} copied={copied} />
+                  <CopyRow label="Account name" value={intent.settlementAccount.accountName} onCopy={copy} copied={copied} />
+                  <CopyRow label="Account number" value={intent.settlementAccount.accountNumber} onCopy={copy} copied={copied} />
+                  <CopyRow label="Amount to transfer" value={formatMoney(intent.totalTransferAmount, intent.currency)} copyValue={String(intent.totalTransferAmount / 100)} onCopy={copy} copied={copied} strong />
+                  <CopyRow label="Narration / reference" value={intent.reference} onCopy={copy} copied={copied} strong />
+                </div>
+                <div className="rounded-2xl bg-gold-soft px-4 py-3 text-xs text-ink/75">
+                  Important: type <strong>{intent.reference}</strong> in your bank transfer narration. Exact reference + exact amount confirms automatically; anything else goes to admin review.
+                </div>
+                <div className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm text-muted">
+                  <Loader2 className="h-4 w-4 animate-spin text-brand" /> Awaiting GTBank alert from {intent.settlementAccount.alertSenderEmail}
+                </div>
+                <Button onClick={close} variant="outline" className="w-full">I&apos;ll complete later</Button>
               </div>
             ) : step === "paying" ? (
               <div className="grid place-items-center py-14"><Loader2 className="h-8 w-8 animate-spin text-brand" /></div>
@@ -129,11 +218,11 @@ export function ContributeSheet({
                   <div className="rounded-2xl bg-white p-3 text-sm">
                     <div className="flex justify-between text-muted"><span>Contribution</span><span>{formatMoney(amountMinor, cur)}</span></div>
                     <div className="flex justify-between text-muted"><span>Service fee</span><span>{formatMoney(fee, cur)}</span></div>
-                    <div className="mt-1 flex justify-between font-semibold"><span>Total</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
+                    <div className="mt-1 flex justify-between font-semibold"><span>{onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
                   </div>
                   {error && <p className="text-sm text-pink">{error}</p>}
-                  <Button onClick={submit} size="lg" className="w-full">Pay {formatMoney(amountMinor + fee, cur)}</Button>
-                  <p className="text-center text-xs text-muted">Demo payment — no real charge.</p>
+                  <Button onClick={submit} size="lg" className="w-full">{onStartBankTransfer ? "Continue to bank transfer" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
+                  <p className="text-center text-xs text-muted">{onStartBankTransfer ? "Temporary GTBank transfer confirmation before Paystack goes live." : "Demo payment — no real charge."}</p>
                 </div>
               </>
             )}
@@ -141,5 +230,19 @@ export function ContributeSheet({
         </motion.div>
       )}
     </AnimatePresence>
+  );
+}
+
+function CopyRow({ label, value, copyValue, onCopy, copied, strong = false }: { label: string; value: string; copyValue?: string; onCopy: (label: string, value: string) => void; copied: string | null; strong?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-ink/5 py-2 last:border-b-0">
+      <div className="min-w-0">
+        <p className="text-xs text-muted">{label}</p>
+        <p className={`truncate ${strong ? "font-semibold text-brand" : "font-medium"}`}>{value}</p>
+      </div>
+      <button onClick={() => onCopy(label, copyValue ?? value)} className="inline-flex shrink-0 items-center gap-1 rounded-full border border-ink/10 px-2.5 py-1 text-xs hover:border-brand/40">
+        <ClipboardCopy className="h-3.5 w-3.5" /> {copied === label ? "Copied" : "Copy"}
+      </button>
+    </div>
   );
 }

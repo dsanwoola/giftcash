@@ -98,8 +98,27 @@ the data layer: a localStorage demo session until Firebase is configured, then
 real Firebase Auth (email/password, Google, phone). Pages: `/login`, `/register`,
 `/dashboard/settings`. On first sign-in the user's `profiles/{uid}` doc is created.
 
-> Remaining for full live mode: gate `fundGift` on a verified payment, add route
-> guards to require sign-in, and KYC actions.
+### Temporary bank-alert bridge before Paystack
+Event gifts can use a semi-automatic GTBank transfer flow before Paystack is live:
+
+1. Guest starts a bank-transfer payment on `/event/[slug]`.
+2. API creates a `payment_intents/{GC...}` document and shows the exact amount,
+   account, and narration/reference to use.
+3. An email/SMS automation forwards GTBank credit alerts to
+   `POST /api/payments/bank-alerts`.
+4. The parser extracts amount, document number, description, value date, time and
+   GiftCash reference. Exact reference + exact amount + GTBank sender auto-confirms.
+5. Confirmed payments append the event contribution server-side, so the live party
+   screen updates from Firestore. Imperfect matches go to review instead of
+   showing publicly.
+
+Production should set `BANK_ALERT_WEBHOOK_SECRET` and have the forwarding
+workflow send it as `x-giftcash-bank-alert-secret`. The temporary settlement
+account currently shown to guests is the approved GTBank account for Neighbours NG
+Technologies.
+
+> Remaining for full live mode: connect Paystack checkout/webhooks, add route
+> guards where needed, and KYC actions.
 
 ---
 

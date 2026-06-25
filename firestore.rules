@@ -83,6 +83,11 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.organizerId);
     }
 
+    // Bank-alert bridge collections: server-created, admin-readable only.
+    match /payment_intents/{id} { allow read, write: if isAdmin(); }
+    match /bank_alerts/{id} { allow read, write: if isAdmin(); }
+    match /payment_reconciliation_logs/{id} { allow read, write: if isAdmin(); }
+
     // Admin-only collections.
     match /admin_audit_logs/{id} { allow read, write: if isAdmin(); }
     match /fraud_flags/{id} { allow read, write: if isAdmin(); }
