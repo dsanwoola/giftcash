@@ -231,37 +231,61 @@ export async function saveThankYou(slug: string, thankYou: ThankYou): Promise<vo
  * cap and donor-name rules are *enforced* — clients cannot bypass it. Runs in a
  * transaction so concurrent gifts can't race the contributions array.
  */
-export async function contributeToEvent(slug: string, data: ContributionData): Promise<GiftEvent> {
+interface VerifiedContributionMeta {
+  paymentReference: string;
+  settlementStatus?: Contribution["settlementStatus"];
+}
+
+function validateEventContribution(event: GiftEvent, data: ContributionData) {
+  if (!Number.isFinite(data.amount) || data.amount < 100) throw new HttpError(400, "Invalid amount.");
+  if (event.campaignMode) {
+    if (data.anonymous || !data.name?.trim()) throw new HttpError(400, "Donor name is required for this campaign.");
+    if (event.maxContribution && data.amount > event.maxContribution) {
+      throw new HttpError(400, "This contribution exceeds the campaign limit.");
+    }
+  }
+}
+
+function contributionFromData(event: GiftEvent, data: ContributionData, meta: VerifiedContributionMeta): Contribution {
+  const c: Contribution = {
+    id: nanoid(),
+    name: data.anonymous ? "Anonymous" : data.name?.trim() || "A guest",
+    anonymous: !!data.anonymous,
+    amount: data.amount,
+    paymentReference: meta.paymentReference,
+    createdAt: new Date().toISOString(),
+  };
+  if (event.settlementAccount) {
+    c.settlementStatus = meta.settlementStatus ?? "pending";
+    c.settlementAccountLast4 = event.settlementAccount.accountNumber.slice(-4);
+  }
+  if (data.message) c.message = data.message; // omit undefined (Firestore rejects)
+  if (data.table) c.table = data.table;
+  return c;
+}
+
+export async function appendVerifiedEventContribution(slug: string, data: ContributionData, meta: VerifiedContributionMeta): Promise<GiftEvent> {
   const db = adminDb();
   const ref = db.collection("events").doc(slug);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const event = snap.data() as GiftEvent | undefined;
     if (!event) throw new HttpError(404, "Event not found");
-    if (!Number.isFinite(data.amount) || data.amount < 100) throw new HttpError(400, "Invalid amount.");
-    if (event.campaignMode) {
-      if (data.anonymous || !data.name?.trim()) throw new HttpError(400, "Donor name is required for this campaign.");
-      if (event.maxContribution && data.amount > event.maxContribution) {
-        throw new HttpError(400, "This contribution exceeds the campaign limit.");
-      }
-    }
-    const c: Contribution = {
-      id: nanoid(),
-      name: data.anonymous ? "Anonymous" : data.name?.trim() || "A guest",
-      anonymous: !!data.anonymous,
-      amount: data.amount,
-      paymentReference: `psk-${nanoid(12)}`,
-      createdAt: new Date().toISOString(),
-    };
-    if (event.settlementAccount) {
-      c.settlementStatus = "forwarded";
-      c.settlementAccountLast4 = event.settlementAccount.accountNumber.slice(-4);
-    }
-    if (data.message) c.message = data.message; // omit undefined (Firestore rejects)
-    if (data.table) c.table = data.table;
-    const contributions = [c, ...(event.contributions ?? [])];
+    validateEventContribution(event, data);
+    const current = event.contributions ?? [];
+    const existing = current.find((c) => c.paymentReference === meta.paymentReference);
+    if (existing) return { ...event, contributions: current };
+    const c = contributionFromData(event, data, meta);
+    const contributions = [c, ...current];
     tx.update(ref, { contributions });
     return { ...event, contributions };
+  });
+}
+
+export async function contributeToEvent(slug: string, data: ContributionData): Promise<GiftEvent> {
+  return appendVerifiedEventContribution(slug, data, {
+    paymentReference: `manual-${nanoid(12)}`,
+    settlementStatus: "pending",
   });
 }
 

@@ -34,10 +34,20 @@ export interface BankTransferIntentView {
   };
 }
 
+export interface PaystackIntentView {
+  provider: "paystack";
+  reference: string;
+  authorizationUrl: string;
+  accessCode: string;
+  amount: number;
+  currency: CurrencyCode;
+}
+
 export function ContributeSheet({
   open,
   onClose,
   onContribute,
+  onStartPaystack,
   onStartBankTransfer,
   pollBankTransfer,
   currency,
@@ -48,6 +58,7 @@ export function ContributeSheet({
   open: boolean;
   onClose: () => void;
   onContribute: (c: ContributionInput) => Promise<void>;
+  onStartPaystack?: (c: ContributionInput) => Promise<PaystackIntentView>;
   onStartBankTransfer?: (c: ContributionInput) => Promise<BankTransferIntentView>;
   pollBankTransfer?: (reference: string) => Promise<Pick<BankTransferIntentView, "status"> & { reviewReason?: string }>;
   currency: CurrencyCode;
@@ -100,16 +111,26 @@ export function ContributeSheet({
     setError("");
     setStep("paying");
     const input = { name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined };
-    if (onStartBankTransfer) {
-      const bankIntent = await onStartBankTransfer(input);
-      setIntent(bankIntent);
-      setStep("awaiting_bank");
-      return;
+    try {
+      if (onStartPaystack) {
+        const paystackIntent = await onStartPaystack(input);
+        window.location.assign(paystackIntent.authorizationUrl);
+        return;
+      }
+      if (onStartBankTransfer) {
+        const bankIntent = await onStartBankTransfer(input);
+        setIntent(bankIntent);
+        setStep("awaiting_bank");
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 1000)); // demo-only fallback for group gifts
+      await onContribute(input);
+      burst();
+      setStep("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Payment could not be started. Please try again.");
+      setStep("form");
     }
-    await new Promise((r) => setTimeout(r, 1000)); // demo-only fallback for group gifts
-    await onContribute(input);
-    burst();
-    setStep("done");
   };
 
   const close = () => {
@@ -218,11 +239,11 @@ export function ContributeSheet({
                   <div className="rounded-2xl bg-white p-3 text-sm">
                     <div className="flex justify-between text-muted"><span>Contribution</span><span>{formatMoney(amountMinor, cur)}</span></div>
                     <div className="flex justify-between text-muted"><span>Service fee</span><span>{formatMoney(fee, cur)}</span></div>
-                    <div className="mt-1 flex justify-between font-semibold"><span>{onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
+                    <div className="mt-1 flex justify-between font-semibold"><span>{onStartPaystack ? "Total Paystack charge" : onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
                   </div>
                   {error && <p className="text-sm text-pink">{error}</p>}
-                  <Button onClick={submit} size="lg" className="w-full">{onStartBankTransfer ? "Continue to bank transfer" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
-                  <p className="text-center text-xs text-muted">{onStartBankTransfer ? "Temporary GTBank transfer confirmation before Paystack goes live." : "Demo payment — no real charge."}</p>
+                  <Button onClick={submit} size="lg" className="w-full">{onStartPaystack ? `Pay with Paystack ${formatMoney(amountMinor + fee, cur)}` : onStartBankTransfer ? "Continue to bank transfer" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
+                  <p className="text-center text-xs text-muted">{onStartPaystack ? "Secured by Paystack. Your gift appears only after payment is verified." : onStartBankTransfer ? "Temporary bank transfer confirmation before Paystack goes live." : "Demo payment — no real charge."}</p>
                 </div>
               </>
             )}

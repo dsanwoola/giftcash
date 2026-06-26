@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ContributionWall } from "@/components/social/contribution-wall";
-import { ContributeSheet, type BankTransferIntentView, type ContributionInput } from "@/components/social/contribute-sheet";
+import { ContributeSheet, type ContributionInput, type PaystackIntentView } from "@/components/social/contribute-sheet";
 import { ShareModal } from "@/components/share/share-modal";
 import { SetupGuide } from "@/components/party/setup-guide";
 import { useRepoData } from "@/lib/data/use-repo";
@@ -42,21 +42,15 @@ export function EventPage({ slug }: { slug: string }) {
   const contribute = async (c: ContributionInput) => {
     await repo.contributeToEvent(slug, { ...c, table: table ?? undefined });
   };
-  const startBankTransfer = async (c: ContributionInput): Promise<BankTransferIntentView> => {
-    const res = await fetch(`/api/events/${slug}/payments/bank-transfer`, {
+  const startPaystack = async (c: ContributionInput): Promise<PaystackIntentView> => {
+    const res = await fetch(`/api/events/${slug}/payments/paystack/initialize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...c, table: table ?? undefined }),
     });
     const payload = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payload.error ?? "Could not create payment reference.");
-    return payload as BankTransferIntentView;
-  };
-  const pollBankTransfer = async (reference: string) => {
-    const res = await fetch(`/api/events/${slug}/payments/${reference}`);
-    const payload = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payload.error ?? "Could not check payment status.");
-    return payload as Pick<BankTransferIntentView, "status"> & { reviewReason?: string };
+    if (!res.ok) throw new Error(payload.error ?? "Could not start Paystack payment.");
+    return payload as PaystackIntentView;
   };
   const inviteMessage = `🎉 You're invited to ${event.celebrants}!\n${dateStr}\n\nIf you'd like to bless us with a cash gift, tap below — it only takes a moment. 💛`;
 
@@ -125,8 +119,7 @@ export function EventPage({ slug }: { slug: string }) {
         open={sheet}
         onClose={() => setSheet(false)}
         onContribute={contribute}
-        onStartBankTransfer={startBankTransfer}
-        pollBankTransfer={pollBankTransfer}
+        onStartPaystack={startPaystack}
         currency={event.currency}
         ctaLabel={`Gift ${event.celebrants}`}
         requireName={event.campaignMode}
