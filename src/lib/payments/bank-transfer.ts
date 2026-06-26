@@ -3,7 +3,7 @@ import type { ContributionData } from "@/lib/data/repo-types";
 import type { CurrencyCode } from "@/lib/types";
 
 export type PaymentIntentStatus = "pending" | "confirmed" | "review" | "expired" | "cancelled";
-export type BankAlertStatus = "auto_confirmed" | "needs_review" | "duplicate" | "ignored";
+export type BankAlertStatus = "auto_confirmed" | "manual_confirmed" | "needs_review" | "duplicate" | "ignored" | "rejected";
 
 export interface SettlementAccountPublic {
   bankName: string;

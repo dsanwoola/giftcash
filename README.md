@@ -117,6 +117,19 @@ workflow send it as `x-giftcash-bank-alert-secret`. The temporary settlement
 account currently shown to guests is the approved GTBank account for Neighbours NG
 Technologies.
 
+AgentMail forwarding is supported in two ways:
+
+- Direct webhook: forward inbound AgentMail message payloads to
+  `POST /api/payments/agentmail` with `x-agentmail-webhook-secret`.
+- Poller script: run `npm run payments:forward-agentmail` with:
+  - `AGENTMAIL_API_KEY`
+  - `AGENTMAIL_INBOX_ID` or `AGENTMAIL_EMAIL`
+  - `GIFTCASH_BANK_ALERT_WEBHOOK_URL=https://<host>/api/payments/agentmail`
+  - `AGENTMAIL_WEBHOOK_SECRET` or `BANK_ALERT_WEBHOOK_SECRET`
+
+Admins review imperfect matches at `/admin/bank-alerts`; manual approval is
+server-authoritative and audit-logged before the contribution appears publicly.
+
 > Remaining for full live mode: connect Paystack checkout/webhooks, add route
 > guards where needed, and KYC actions.
 

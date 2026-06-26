@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "firestore:bootstrap": "node scripts/bootstrap-firestore-schema.mjs",
-    "payments:simulate": "node scripts/simulate-payments.mjs"
+    "payments:simulate": "node scripts/simulate-payments.mjs",
+    "payments:forward-agentmail": "node scripts/agentmail-bank-alert-forwarder.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
+    "agentmail": "^0.5.13",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",

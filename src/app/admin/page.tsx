@@ -47,6 +47,11 @@ export default function AdminOverview() {
           <p className="mt-2 font-medium">Review withdrawals</p>
           <p className="text-xs text-cream/60">{stats?.pendingWithdrawals ?? 0} pending approval</p>
         </Link>
+        <Link href="/admin/bank-alerts" className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
+          <p className="text-2xl">⚠️</p>
+          <p className="mt-2 font-medium">Review bank alerts</p>
+          <p className="text-xs text-cream/60">Approve imperfect GTBank matches</p>
+        </Link>
         <Link href="/admin/gifts" className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
           <p className="text-2xl">🎁</p>
           <p className="mt-2 font-medium">Manage gifts</p>
