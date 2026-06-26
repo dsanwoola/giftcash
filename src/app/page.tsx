@@ -69,7 +69,7 @@ export default function Home() {
                 Send a Gift Cash <ArrowRight className="h-4 w-4" />
               </ButtonLink>
               <ButtonLink href="/event/create" size="lg" variant="gold" className="w-full sm:w-auto">
-                Activate event / Party Mode
+                Activate Event / Party Mode
               </ButtonLink>
               <ButtonLink href="/gift/tolu-birthday" size="lg" variant="outline" className="w-full sm:w-auto">
                 See a live reveal
