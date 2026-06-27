@@ -39,27 +39,38 @@ function textFromMessage(message) {
 function htmlFromMessage(message) {
   return message.html || message.bodyHtml || message.content?.html || "";
 }
+function isoDate(value) {
+  if (!value) return new Date().toISOString();
+  if (typeof value === "string") return value;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "object") {
+    if (typeof value.toISOString === "function") return value.toISOString();
+    if (typeof value.seconds === "number") return new Date(value.seconds * 1000).toISOString();
+  }
+  return new Date().toISOString();
+}
 
 const state = await readState();
 const processed = new Set(state.processed || []);
-const result = await client.inboxes.messages.list(inboxId, { limit: 50, from: bankSender });
+const result = await client.inboxes.messages.list(inboxId, { limit: 50, from: [bankSender] });
 const messages = listFromResponse(result)
   .filter((message) => !processed.has(message.id || message.messageId))
   .filter((message) => emailOf(message.from || message.sender).toLowerCase().includes(bankSender))
   .reverse();
 
 let forwarded = 0;
-for (const message of messages) {
-  const id = message.id || message.messageId;
+for (const listMessage of messages) {
+  const id = listMessage.id || listMessage.messageId;
+  const message = await client.inboxes.messages.get(inboxId, id);
   const payload = {
     message: {
       id,
-      from: message.from || message.sender,
-      to: message.to || message.recipients,
-      subject: message.subject || "",
+      from: message.from || message.sender || listMessage.from || listMessage.sender,
+      to: message.to || message.recipients || listMessage.to || listMessage.recipients,
+      subject: message.subject || listMessage.subject || "",
       text: textFromMessage(message),
-      html: htmlFromMessage(message),
-      receivedAt: message.receivedAt || message.createdAt || new Date().toISOString(),
+      html: htmlFromMessage(message) || message.extractedHtml || "",
+      receivedAt: isoDate(message.receivedAt || message.createdAt || message.timestamp || listMessage.receivedAt || listMessage.createdAt || listMessage.timestamp),
     },
   };
   const res = await fetch(webhookUrl, {
@@ -80,4 +91,4 @@ state.processed = [...processed];
 state.lastRunAt = new Date().toISOString();
 state.lastForwarded = forwarded;
 await saveState(state);
-if (forwarded === 0) console.log("No new GTBank AgentMail alerts to forward.");
+if (forwarded === 0 && process.env.GIFTCASH_AGENTMAIL_QUIET_EMPTY !== "true") console.log("No new GTBank AgentMail alerts to forward.");
