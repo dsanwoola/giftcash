@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
 import { fail } from "@/lib/api/handle";
 import { HttpError } from "@/lib/data/server-store";
 import { adminDb } from "@/lib/firebase/admin";
@@ -61,10 +60,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
 }
 
 async function uniqueReference(db: FirebaseFirestore.Firestore) {
-  for (let i = 0; i < 5; i += 1) {
+  for (let i = 0; i < 25; i += 1) {
     const reference = createGiftCashReference();
     const existing = await db.collection("payment_intents").doc(reference).get();
     if (!existing.exists) return reference;
   }
-  return `GC${nanoid(8).replace(/[^a-z0-9]/gi, "").slice(0, 6).toUpperCase()}`;
+  throw new HttpError(503, "Could not generate a unique payment code. Please try again.");
 }

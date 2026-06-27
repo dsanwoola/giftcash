@@ -51,12 +51,12 @@ export default function AdminBankAlerts() {
   const actionable = useMemo(() => items.filter((i) => i.status === "needs_review"), [items]);
 
   const review = async (id: string, action: "approve" | "reject") => {
-    const verb = action === "approve" ? "approve this bank alert and add the gift publicly" : "reject this bank alert";
-    if (!window.confirm(`Are you sure you want to ${verb}?`)) return;
     setBusy(`${id}:${action}`);
     setError("");
     try {
-      const token = await getFirebaseAuth().currentUser?.getIdToken();
+      const user = getFirebaseAuth().currentUser;
+      if (!user) throw new Error("Sign in as an admin before reviewing bank alerts.");
+      const token = await user.getIdToken(true);
       const res = await fetch(`/api/admin/bank-alerts/${id}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -125,10 +125,10 @@ export default function AdminBankAlerts() {
 
               {alert.status === "needs_review" && (
                 <div className="mt-4 grid gap-2 sm:flex">
-                  <button onClick={() => review(alert.id, "approve")} disabled={!canApprove || busy === `${alert.id}:approve`} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-emerald px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
+                  <button type="button" onClick={() => review(alert.id, "approve")} disabled={!canApprove || busy === `${alert.id}:approve`} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-emerald px-4 py-2 text-sm font-medium text-white disabled:opacity-50">
                     {busy === `${alert.id}:approve` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Approve & add gift
                   </button>
-                  <button onClick={() => review(alert.id, "reject")} disabled={busy === `${alert.id}:reject`} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-white/15 px-4 py-2 text-sm text-cream/80 disabled:opacity-50">
+                  <button type="button" onClick={() => review(alert.id, "reject")} disabled={busy === `${alert.id}:reject`} className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-white/15 px-4 py-2 text-sm text-cream/80 disabled:opacity-50">
                     <X className="h-4 w-4" /> Reject
                   </button>
                 </div>

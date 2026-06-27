@@ -70,8 +70,13 @@ export const TEMP_SETTLEMENT_ACCOUNT: SettlementAccountPublic = {
 };
 
 export function createGiftCashReference() {
-  // Short enough for Nigerian bank narration fields and still human-readable.
-  return `GC${randomBytes(3).toString("hex").toUpperCase()}`;
+  // Temporary bank-transfer bridge: use a short 4-digit code that is easy to type
+  // into Nigerian bank narration/reference fields.
+  return String(randomBytes(2).readUInt16BE(0) % 10000).padStart(4, "0");
+}
+
+export function normalizePaymentReference(value?: string) {
+  return value?.trim().toUpperCase();
 }
 
 export function bankAlertId(alert: ParsedBankAlert) {
@@ -103,7 +108,9 @@ export function parseGtbankCreditAlert(input: {
   const descMatch = text.match(/Description\s*:?\s*([\s\S]+?)(?:\s+Amount\s*:|\s+Value Date\s*:|\n\s*Amount\s*:)/i);
   const valueDateMatch = text.match(/Value Date\s*:?\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
   const timeMatch = text.match(/Time of Transaction\s*:?\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?\s*(?:AM|PM)?)/i);
-  const refMatch = text.match(/\b(GC[A-Z0-9]{6,10})\b/i);
+  const description = descMatch?.[1]?.trim().replace(/\s+/g, " ");
+  const legacyRefMatch = text.match(/\b(GC[A-Z0-9]{6,10})\b/i);
+  const fourDigitRefMatch = description?.match(/\b([0-9]{4})\b/) ?? text.match(/\b(?:ref(?:erence)?|narration|code)\D{0,12}([0-9]{4})\b/i);
   const credit = /\bCREDIT\b/i.test(text) || /credit transaction occurred/i.test(text);
 
   return {
@@ -115,11 +122,11 @@ export function parseGtbankCreditAlert(input: {
     accountLast4: accountMatch?.[1],
     amount: amountMatch ? nairaToMinor(amountMatch[1]) : undefined,
     currency: amountMatch ? "NGN" : undefined,
-    description: descMatch?.[1]?.trim().replace(/\s+/g, " "),
+    description,
     documentNumber: docMatch?.[1],
     valueDate: valueDateMatch?.[1],
     transactionTime: timeMatch?.[1],
-    paymentReference: refMatch?.[1]?.toUpperCase(),
+    paymentReference: normalizePaymentReference(fourDigitRefMatch?.[1] ?? legacyRefMatch?.[1]),
     rawText,
     receivedAt: input.receivedAt || new Date().toISOString(),
   };
@@ -132,7 +139,7 @@ export function scoreAlertMatch(alert: ParsedBankAlert, intent: BankTransferPaym
   else reasons.push("Bank sender email did not match configured GTBank alert sender.");
   if (alert.isCredit) score += 20;
   else reasons.push("Alert was not identified as a credit transaction.");
-  if (alert.paymentReference === intent.reference) score += 30;
+  if (normalizePaymentReference(alert.paymentReference) === normalizePaymentReference(intent.reference)) score += 30;
   else reasons.push("GiftCash payment reference was not found or did not match.");
   if (alert.amount === intent.totalTransferAmount) score += 20;
   else reasons.push("Alert amount did not exactly match the expected transfer total.");

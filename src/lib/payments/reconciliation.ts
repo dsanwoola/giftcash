@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import type { Contribution, GiftEvent } from "@/lib/types";
 import {
   bankAlertId,
+  normalizePaymentReference,
   scoreAlertMatch,
   type BankAlertRecord,
   type BankAlertStatus,
@@ -36,8 +37,9 @@ export async function processParsedBankAlert(alert: ParsedBankAlert): Promise<Ba
   let reviewReason = "No GiftCash payment reference was found in the bank alert.";
   let matchedIntent: BankTransferPaymentIntent | undefined;
 
-  if (alert.paymentReference) {
-    const intentSnap = await db.collection("payment_intents").doc(alert.paymentReference).get();
+  const normalizedAlertReference = normalizePaymentReference(alert.paymentReference);
+  if (normalizedAlertReference) {
+    const intentSnap = await db.collection("payment_intents").doc(normalizedAlertReference).get();
     matchedIntent = intentSnap.data() as BankTransferPaymentIntent | undefined;
     if (matchedIntent) {
       const scored = scoreAlertMatch(alert, matchedIntent);
