@@ -34,20 +34,10 @@ export interface BankTransferIntentView {
   };
 }
 
-export interface PaystackIntentView {
-  provider: "paystack";
-  reference: string;
-  authorizationUrl: string;
-  accessCode: string;
-  amount: number;
-  currency: CurrencyCode;
-}
-
 export function ContributeSheet({
   open,
   onClose,
   onContribute,
-  onStartPaystack,
   onStartBankTransfer,
   pollBankTransfer,
   currency,
@@ -58,7 +48,6 @@ export function ContributeSheet({
   open: boolean;
   onClose: () => void;
   onContribute: (c: ContributionInput) => Promise<void>;
-  onStartPaystack?: (c: ContributionInput) => Promise<PaystackIntentView>;
   onStartBankTransfer?: (c: ContributionInput) => Promise<BankTransferIntentView>;
   pollBankTransfer?: (reference: string) => Promise<Pick<BankTransferIntentView, "status"> & { reviewReason?: string }>;
   currency: CurrencyCode;
@@ -112,11 +101,6 @@ export function ContributeSheet({
     setStep("paying");
     const input = { name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined };
     try {
-      if (onStartPaystack) {
-        const paystackIntent = await onStartPaystack(input);
-        window.location.assign(paystackIntent.authorizationUrl);
-        return;
-      }
       if (onStartBankTransfer) {
         const bankIntent = await onStartBankTransfer(input);
         setIntent(bankIntent);
@@ -196,10 +180,16 @@ export function ContributeSheet({
                   <CopyRow label="Account name" value={intent.settlementAccount.accountName} onCopy={copy} copied={copied} />
                   <CopyRow label="Account number" value={intent.settlementAccount.accountNumber} onCopy={copy} copied={copied} />
                   <CopyRow label="Amount to transfer" value={formatMoney(intent.totalTransferAmount, intent.currency)} copyValue={String(intent.totalTransferAmount / 100)} onCopy={copy} copied={copied} strong />
-                  <CopyRow label="Narration / reference" value={intent.reference} onCopy={copy} copied={copied} strong />
+                  <div className="mt-4 rounded-2xl border-2 border-red-500 bg-red-50 p-4 text-center">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-700">Payment reference</p>
+                    <p className="mt-2 break-all font-mono text-3xl font-black text-red-700">{intent.reference}</p>
+                    <button onClick={() => copy("Reference", intent.reference)} className="mt-3 inline-flex items-center gap-1 rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">
+                      <ClipboardCopy className="h-3.5 w-3.5" /> {copied === "Reference" ? "Copied" : "Copy reference"}
+                    </button>
+                  </div>
                 </div>
                 <div className="rounded-2xl bg-gold-soft px-4 py-3 text-xs text-ink/75">
-                  Important: type <strong>{intent.reference}</strong> in your bank transfer narration. Exact reference + exact amount confirms automatically; anything else goes to admin review.
+                  Important: type <strong className="text-red-700">{intent.reference}</strong> as your bank transfer narration/reference. Exact reference + exact amount confirms automatically; anything else goes to admin review.
                 </div>
                 <div className="flex items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3 text-sm text-muted">
                   <Loader2 className="h-4 w-4 animate-spin text-brand" /> Awaiting GTBank alert from {intent.settlementAccount.alertSenderEmail}
@@ -239,11 +229,11 @@ export function ContributeSheet({
                   <div className="rounded-2xl bg-white p-3 text-sm">
                     <div className="flex justify-between text-muted"><span>Contribution</span><span>{formatMoney(amountMinor, cur)}</span></div>
                     <div className="flex justify-between text-muted"><span>Service fee</span><span>{formatMoney(fee, cur)}</span></div>
-                    <div className="mt-1 flex justify-between font-semibold"><span>{onStartPaystack ? "Total Paystack charge" : onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
+                    <div className="mt-1 flex justify-between font-semibold"><span>{onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
                   </div>
                   {error && <p className="text-sm text-pink">{error}</p>}
-                  <Button onClick={submit} size="lg" className="w-full">{onStartPaystack ? `Pay with Paystack ${formatMoney(amountMinor + fee, cur)}` : onStartBankTransfer ? "Continue to bank transfer" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
-                  <p className="text-center text-xs text-muted">{onStartPaystack ? "Secured by Paystack. Your gift appears only after payment is verified." : onStartBankTransfer ? "Temporary bank transfer confirmation before Paystack goes live." : "Demo payment — no real charge."}</p>
+                  <Button onClick={submit} size="lg" className="w-full">{onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
+                  <p className="text-center text-xs text-muted">{onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
                 </div>
               </>
             )}

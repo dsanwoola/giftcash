@@ -55,20 +55,12 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
   const [showTotal, setShowTotal] = useState(false);
   const [campaignMode, setCampaignMode] = useState(false);
   const [maxContribution, setMaxContribution] = useState("");
-  const [settlementBankName, setSettlementBankName] = useState("");
-  const [settlementAccountNumber, setSettlementAccountNumber] = useState("");
-  const [settlementAccountName, setSettlementAccountName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const create = async () => {
     if (!celebrants.trim()) return setError("Add the celebrant name(s).");
     if (!date) return setError("Pick the event date.");
-    const cleanAccountNumber = settlementAccountNumber.replace(/\D/g, "");
-    const hasSettlementInput = settlementBankName.trim() || cleanAccountNumber || settlementAccountName.trim();
-    if (hasSettlementInput && (!settlementBankName.trim() || !settlementAccountName.trim() || !/^\d{10}$/.test(cleanAccountNumber))) {
-      return setError("Fill the settlement bank, account name, and valid 10-digit account number.");
-    }
     setError(""); setBusy(true);
     const chosen = occasionById(type);
     const event = await repo.createEvent({
@@ -83,12 +75,6 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
       goalAmount: goal ? toMinor(Number(goal)) : undefined,
       campaignMode: campaignMode || undefined,
       maxContribution: campaignMode && maxContribution ? toMinor(Number(maxContribution)) : undefined,
-      settlementAccount: hasSettlementInput ? {
-        bankName: settlementBankName.trim().replace(/\s+/g, " "),
-        accountNumber: cleanAccountNumber,
-        accountName: settlementAccountName.trim().replace(/\s+/g, " "),
-      } : undefined,
-      payoutProvider: hasSettlementInput ? "paystack" : undefined,
       isPublic: true,
       organizerName,
     });
@@ -127,21 +113,6 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           </div>
           <Field label="Fundraising goal (optional)"><input className={inputCls} inputMode="numeric" value={goal} onChange={(e) => setGoal(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="e.g. 500000 — shows a goal thermometer on the big screen" /></Field>
           <Field label="Story / welcome note (optional)"><textarea rows={3} className={inputCls} value={story} onChange={(e) => setStory(e.target.value)} placeholder="A warm note for your guests…" /></Field>
-
-          <div className="space-y-3 rounded-3xl border border-emerald/20 bg-emerald/5 p-4">
-            <div>
-              <p className="text-sm font-semibold text-ink">Settlement account for this occasion</p>
-              <p className="mt-1 text-xs text-muted">
-                Optional for demo. When Paystack is connected, successful gifts for this event should settle/forward to this nominated account, while the live screen shows each payment alert.
-              </p>
-            </div>
-            <Field label="Bank name"><input className={inputCls} value={settlementBankName} onChange={(e) => setSettlementBankName(e.target.value)} placeholder="e.g. GTBank / Access Bank / Moniepoint" /></Field>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Account number"><input className={inputCls} inputMode="numeric" maxLength={10} value={settlementAccountNumber} onChange={(e) => setSettlementAccountNumber(e.target.value.replace(/\D/g, "").slice(0, 10))} placeholder="10 digits" /></Field>
-              <Field label="Account name"><input className={inputCls} value={settlementAccountName} onChange={(e) => setSettlementAccountName(e.target.value)} placeholder="Recipient / couple / organizer" /></Field>
-            </div>
-            <p className="text-xs text-muted">For guest transparency, only the bank name and last 4 digits are shown on host screens.</p>
-          </div>
 
           <button onClick={() => setShowTotal((v) => !v)} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
             <span>👁️ Show total received to guests</span>

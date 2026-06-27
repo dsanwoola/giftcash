@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ContributionWall } from "@/components/social/contribution-wall";
-import { ContributeSheet, type ContributionInput, type PaystackIntentView } from "@/components/social/contribute-sheet";
+import { ContributeSheet, type BankTransferIntentView, type ContributionInput } from "@/components/social/contribute-sheet";
 import { ShareModal } from "@/components/share/share-modal";
 import { SetupGuide } from "@/components/party/setup-guide";
 import { useRepoData } from "@/lib/data/use-repo";
@@ -42,15 +42,15 @@ export function EventPage({ slug }: { slug: string }) {
   const contribute = async (c: ContributionInput) => {
     await repo.contributeToEvent(slug, { ...c, table: table ?? undefined });
   };
-  const startPaystack = async (c: ContributionInput): Promise<PaystackIntentView> => {
-    const res = await fetch(`/api/events/${slug}/payments/paystack/initialize`, {
+  const startBankTransfer = async (c: ContributionInput): Promise<BankTransferIntentView> => {
+    const res = await fetch(`/api/events/${slug}/payments/bank-transfer`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...c, table: table ?? undefined }),
     });
     const payload = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payload.error ?? "Could not start Paystack payment.");
-    return payload as PaystackIntentView;
+    if (!res.ok) throw new Error(payload.error ?? "Could not prepare bank transfer details.");
+    return payload as BankTransferIntentView;
   };
   const inviteMessage = `🎉 You're invited to ${event.celebrants}!\n${dateStr}\n\nIf you'd like to bless us with a cash gift, tap below — it only takes a moment. 💛`;
 
@@ -76,7 +76,6 @@ export function EventPage({ slug }: { slug: string }) {
           <p className="mt-1 text-sm text-muted">Bless {event.celebrants} with a Gift Cash contribution.</p>
           {table && <p className="mt-2 inline-block rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand">📍 You&apos;re at Table {table}</p>}
           {event.campaignMode && <p className="mt-3 rounded-xl bg-gold-soft px-3 py-2 text-xs text-ink/70">🏛️ Campaign donation — your name is required{event.maxContribution ? `, up to ${formatMoney(event.maxContribution, event.currency)}` : ""}. By donating you confirm you&apos;re an eligible contributor.</p>}
-          {event.settlementAccount && <p className="mt-3 rounded-xl bg-emerald/10 px-3 py-2 text-xs text-ink/70">✅ Payment alerts display live for transparency. Gifts are routed via {event.payoutProvider === "paystack" ? "Paystack" : "manual settlement"} to {event.settlementAccount.bankName} ••••{event.settlementAccount.accountNumber.slice(-4)}.</p>}
           {event.showTotal && <p className="mt-3 font-display text-2xl font-semibold text-emerald">{formatMoney(total, event.currency)} received</p>}
           <div className="mt-5 grid gap-3 sm:flex">
             <Button onClick={() => setSheet(true)} size="lg" className="flex-1">Gift cash</Button>
@@ -119,7 +118,7 @@ export function EventPage({ slug }: { slug: string }) {
         open={sheet}
         onClose={() => setSheet(false)}
         onContribute={contribute}
-        onStartPaystack={startPaystack}
+        onStartBankTransfer={startBankTransfer}
         currency={event.currency}
         ctaLabel={`Gift ${event.celebrants}`}
         requireName={event.campaignMode}
