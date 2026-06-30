@@ -274,7 +274,9 @@ export interface GiftEvent {
   type: EventType;
   title: string;
   celebrants: string;
-  date: string; // ISO event date
+  date: string; // ISO event start date/time (legacy events may be date-only midnight)
+  startsAt?: string; // ISO party window start — used by the bank-alert scheduler
+  endsAt?: string; // ISO party window end — bank-alert polling is disabled after this
   story?: string;
   gradient: [string, string];
   currency: CurrencyCode;

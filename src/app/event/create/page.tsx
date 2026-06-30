@@ -49,6 +49,8 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
   const [celebrants, setCelebrants] = useState("");
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
+  const [startTime, setStartTime] = useState("18:00");
+  const [endTime, setEndTime] = useState("23:59");
   const [story, setStory] = useState("");
   const [currency, setCurrency] = useState<CurrencyCode>("NGN");
   const [goal, setGoal] = useState("");
@@ -61,13 +63,20 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
   const create = async () => {
     if (!celebrants.trim()) return setError("Add the celebrant name(s).");
     if (!date) return setError("Pick the event date.");
+    if (!startTime || !endTime) return setError("Add the event start and end time.");
+    const startsAt = new Date(`${date}T${startTime}`);
+    const endsAt = new Date(`${date}T${endTime}`);
+    if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return setError("Enter a valid event date and time.");
+    if (endsAt <= startsAt) return setError("Event end time must be after the start time.");
     setError(""); setBusy(true);
     const chosen = occasionById(type);
     const event = await repo.createEvent({
       type,
       title: title.trim() || `${chosen.label} of ${celebrants.trim()}`,
       celebrants: celebrants.trim(),
-      date: new Date(date).toISOString(),
+      date: startsAt.toISOString(),
+      startsAt: startsAt.toISOString(),
+      endsAt: endsAt.toISOString(),
       story: story.trim() || undefined,
       gradient: chosen.gradient,
       currency,
@@ -103,8 +112,12 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           </Field>
           <Field label="Celebrant name(s) *"><input className={inputCls} value={celebrants} onChange={(e) => setCelebrants(e.target.value)} placeholder="e.g. Tunde & Zainab" /></Field>
           <Field label="Page title (optional)"><input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. The wedding of Tunde & Zainab" /></Field>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Field label="Event date *"><input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} /></Field>
+            <Field label="Start time *"><input type="time" className={inputCls} value={startTime} onChange={(e) => setStartTime(e.target.value)} /></Field>
+            <Field label="End time *"><input type="time" className={inputCls} value={endTime} onChange={(e) => setEndTime(e.target.value)} /></Field>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Field label="Currency">
               <select className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
                 {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}

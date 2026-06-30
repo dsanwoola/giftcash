@@ -59,6 +59,8 @@ export interface CreateEventInput {
   title: string;
   celebrants: string;
   date: string;
+  startsAt?: string;
+  endsAt?: string;
   story?: string;
   gradient: [string, string];
   currency: CurrencyCode;

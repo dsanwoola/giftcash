@@ -339,6 +339,8 @@ export const demoRepo: GiftRepo = {
       title: input.title,
       celebrants: input.celebrants,
       date: input.date,
+      startsAt: input.startsAt,
+      endsAt: input.endsAt,
       story: input.story,
       gradient: input.gradient,
       currency: input.currency,
