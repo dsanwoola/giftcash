@@ -80,11 +80,11 @@ export function normalizePaymentReference(value?: string) {
 }
 
 export function bankAlertId(alert: ParsedBankAlert) {
-  if (alert.documentNumber) return `gtbank-${alert.documentNumber}`;
   const hash = createHash("sha256")
-    .update(`${alert.senderEmail ?? ""}|${alert.amount ?? ""}|${alert.description ?? ""}|${alert.receivedAt}|${alert.rawText}`)
+    .update(`${alert.documentNumber ?? ""}|${alert.paymentReference ?? ""}|${alert.amount ?? ""}|${alert.description ?? ""}|${alert.receivedAt}|${alert.rawText}`)
     .digest("hex")
-    .slice(0, 24);
+    .slice(0, 16);
+  if (alert.documentNumber) return `gtbank-${alert.documentNumber}-${hash}`;
   return `bank-alert-${hash}`;
 }
 
