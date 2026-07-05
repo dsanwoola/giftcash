@@ -43,7 +43,7 @@ export async function requireUid(req: Request): Promise<string> {
 
 export async function requireAdmin(req: Request): Promise<string> {
   const uid = await requireUid(req);
-  const profile = await adminDb().collection("profiles").doc(uid).get();
+  const profile = await adminDb().collection<UserProfile>("profiles").doc(uid).get();
   if (profile.data()?.role !== "admin") throw new HttpError(403, "Admins only");
   return uid;
 }

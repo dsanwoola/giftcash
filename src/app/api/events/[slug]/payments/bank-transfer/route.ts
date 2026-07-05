@@ -52,14 +52,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
       createdAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 30 * 60 * 1000).toISOString(),
     };
-    await db.collection("payment_intents").doc(reference).set(intent);
+    await db.collection<BankTransferPaymentIntent>("payment_intents").doc(reference).set(intent);
     return NextResponse.json(intent);
   } catch (e) {
     return fail(e);
   }
 }
 
-async function uniqueReference(db: FirebaseFirestore.Firestore) {
+async function uniqueReference(db: ReturnType<typeof adminDb>) {
   for (let i = 0; i < 25; i += 1) {
     const reference = createGiftCashReference();
     const existing = await db.collection("payment_intents").doc(reference).get();
