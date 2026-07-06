@@ -74,6 +74,7 @@ export interface CreateEventInput {
   maxContribution?: number;
   settlementAccount?: BankAccount;
   payoutProvider?: "paystack" | "manual";
+  revenuePlan?: "starter" | "pro" | "enterprise";
   isPublic: boolean;
   ticketingEnabled?: boolean;
   rsvpEnabled?: boolean;

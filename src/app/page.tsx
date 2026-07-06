@@ -10,11 +10,14 @@ import {
   ClipboardCheck,
   Armchair,
   DoorOpen,
+  Percent,
 } from "lucide-react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ButtonLink } from "@/components/ui/button";
 import Link from "next/link";
+import { REVENUE_PLANS } from "@/lib/monetization";
+import { formatMoney } from "@/lib/money";
 
 const features: {
   icon: React.ElementType;
@@ -139,6 +142,28 @@ export default function Home() {
             const cls = "relative block rounded-3xl border border-ink/5 bg-white/70 p-5 shadow-soft sm:p-6";
             return f.href ? <Link key={f.title} href={f.href} className={`${cls} transition hover:-translate-y-1`}>{card}</Link> : <div key={f.title} className={cls}>{card}</div>;
           })}
+        </div>
+      </section>
+
+      <section id="pricing" className="mx-auto max-w-6xl px-4 py-12 sm:px-5 sm:py-16">
+        <div className="rounded-[2rem] border border-ink/5 bg-white/75 p-6 shadow-soft sm:p-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <span className="inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand"><Percent className="h-3.5 w-3.5" /> Monetization built in</span>
+              <h2 className="mt-4 font-display text-2xl font-semibold sm:text-3xl">Free to launch. Occasion earns when events earn.</h2>
+              <p className="mt-2 max-w-2xl text-sm text-muted">Starter events pay transparent transaction fees. Pro events pay a setup upgrade for lower fees, advanced reports and reduced branding.</p>
+            </div>
+            <ButtonLink href="/pricing" variant="outline" className="w-full md:w-auto">View strategy</ButtonLink>
+          </div>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {REVENUE_PLANS.map((plan) => (
+              <div key={plan.id} className="rounded-3xl bg-cream/70 p-5">
+                <p className="font-semibold">{plan.name}</p>
+                <p className="mt-1 text-sm text-muted">{plan.eventSetupFee ? `${formatMoney(plan.eventSetupFee, plan.currency)} per event` : plan.monthlyFee ? `${formatMoney(plan.monthlyFee, plan.currency)} monthly` : "Free event page"}</p>
+                <p className="mt-3 text-xs text-muted">Tickets {plan.ticketFeeBps / 100}% · Tables {plan.tableFeeBps / 100}% · GiftCash {plan.giftCashFeeBps / 100}%</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

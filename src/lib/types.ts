@@ -232,6 +232,8 @@ export interface Contribution {
   name: string; // display name, or "Anonymous"
   anonymous: boolean;
   amount: number; // minor units
+  platformFee?: number; // Occasion revenue share in minor units
+  netAmount?: number; // amount due to organizer/recipient after platform fee
   message?: string;
   table?: string; // optional table/seat tag (from a table QR code)
   paymentReference?: string; // provider/reference shown to the host as the alert id
@@ -320,6 +322,8 @@ export interface EventTicket {
   buyerEmail?: string;
   quantity: number;
   totalAmount: number;
+  platformFee?: number;
+  netAmount?: number;
   currency: CurrencyCode;
   status: TicketStatus;
   qrCode: string;
@@ -351,6 +355,7 @@ export interface GiftEvent {
   maxContribution?: number; // cap per contribution in campaign mode (minor units)
   settlementAccount?: BankAccount; // account where event gifts are routed/settled
   payoutProvider?: "paystack" | "manual";
+  revenuePlan?: "starter" | "pro" | "enterprise";
   isPublic: boolean;
   ticketingEnabled?: boolean;
   rsvpEnabled?: boolean;

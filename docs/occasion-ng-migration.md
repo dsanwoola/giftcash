@@ -30,6 +30,18 @@ GiftCash is now positioned as the cash-gifting module inside the parent Occasion
 - D1 compatibility document store exists for interim server route migration.
 - New D1 event commerce tables are in `migrations/0003_occasion_event_commerce.sql`.
 
+## Monetization model
+
+Occasion uses a "free to launch, pay when money moves" model.
+
+- **Starter**: free event pages with 5% ticket/table fee and 1.5% GiftCash fee, capped per transaction.
+- **Occasion Pro**: paid per-event upgrade with lower 2.5% ticket/table fee, 1% GiftCash fee, reduced branding, priority support and advanced reports.
+- **Enterprise**: monthly/custom pricing for venues, conferences, concerts and event agencies with lowest transaction fees, account management, API/webhooks and white-label options.
+- **Add-ons**: Party Mode skins, SMS/WhatsApp bundles, printed QR packs, premium seating exports and vendor boosts.
+- **Marketplace**: vendor/sponsor listings and qualified lead fees once demand is validated.
+
+The canonical pricing data and fee calculator live in `src/lib/monetization.ts`. Ticket purchases now store `platformFee` and `netAmount`; GiftCash event contributions now store `platformFee` and `netAmount`.
+
 ## Next backend implementation slices
 
 1. Apply D1 migrations remotely.

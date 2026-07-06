@@ -8,6 +8,7 @@ import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ShareHub } from "@/components/share/share-hub";
 import { CURRENCIES, toMinor } from "@/lib/money";
+import { REVENUE_PLANS, type RevenuePlanId } from "@/lib/monetization";
 import { repo } from "@/lib/data/repo";
 import type { CreateEventInput } from "@/lib/data/repo-types";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -69,6 +70,7 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
   const [tableCapacity, setTableCapacity] = useState("10");
   const [tableCount, setTableCount] = useState("10");
   const [tablePrice, setTablePrice] = useState("");
+  const [revenuePlan, setRevenuePlan] = useState<RevenuePlanId>("starter");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -135,6 +137,8 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
       goalAmount: goal ? toMinor(Number(goal)) : undefined,
       campaignMode: campaignMode || undefined,
       maxContribution: campaignMode && maxContribution ? toMinor(Number(maxContribution)) : undefined,
+      payoutProvider: "manual",
+      revenuePlan,
       isPublic: true,
       ticketingEnabled,
       rsvpEnabled,
@@ -227,6 +231,29 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
                 <Field label="Table price"><input className={inputCls} inputMode="numeric" value={tablePrice} onChange={(e) => setTablePrice(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="optional" /></Field>
               </div>
             )}
+          </div>
+
+          <div className="space-y-3 rounded-3xl border border-ink/5 bg-white/75 p-4 shadow-soft">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-display text-lg font-semibold">Monetization plan</p>
+                <p className="text-sm text-muted">Choose how Occasion earns from this event. Starter is free to launch.</p>
+              </div>
+              <Link href="/pricing" className="text-sm font-medium text-brand">See pricing</Link>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {REVENUE_PLANS.map((plan) => (
+                <button
+                  key={plan.id}
+                  type="button"
+                  onClick={() => setRevenuePlan(plan.id)}
+                  className={`rounded-2xl border p-3 text-left text-sm transition ${revenuePlan === plan.id ? "border-brand/40 bg-brand-soft/50" : "border-ink/10 bg-white"}`}
+                >
+                  <span className="font-semibold">{plan.name}</span>
+                  <span className="mt-1 block text-xs text-muted">Tickets {plan.ticketFeeBps / 100}% · Gifts {plan.giftCashFeeBps / 100}%</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           <button onClick={() => setShowTotal((v) => !v)} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">

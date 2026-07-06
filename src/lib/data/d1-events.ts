@@ -2,6 +2,7 @@ import "server-only";
 import { nanoid } from "nanoid";
 import { adminDb } from "../firebase/admin";
 import { buildSeed, DEMO_USER_ID } from "./seed";
+import { calculatePlatformFee } from "../monetization";
 import type { EventGuest, EventTable, EventTicket, EventTicketType, GiftEvent, RsvpStatus } from "../types";
 import type { CreateEventInput } from "./repo-types";
 
@@ -42,6 +43,7 @@ function normalizeEvent(input: CreateEventInput): GiftEvent {
     maxContribution: input.maxContribution,
     settlementAccount: input.settlementAccount,
     payoutProvider: input.payoutProvider,
+    revenuePlan: input.revenuePlan ?? "starter",
     isPublic: input.isPublic,
     ticketingEnabled: input.ticketingEnabled,
     rsvpEnabled: input.rsvpEnabled,
@@ -130,6 +132,8 @@ export async function purchaseTicket(slug: string, input: { ticketTypeId: string
   const quantity = Math.max(1, Math.min(20, Number(input.quantity) || 1));
   if (type.sold + quantity > type.quantity) throw new Error("Not enough tickets left.");
   const qrCode = `OCC-${slug}-${nanoid(14)}`;
+  const grossAmount = type.price * quantity;
+  const fee = calculatePlatformFee(grossAmount, "tickets", event.revenuePlan, type.currency);
   const ticket: EventTicket = {
     id: `ticket_${nanoid(10)}`,
     eventSlug: slug,
@@ -137,7 +141,9 @@ export async function purchaseTicket(slug: string, input: { ticketTypeId: string
     buyerName: cleanText(input.buyerName, "Ticket buyer"),
     buyerEmail: input.buyerEmail?.trim() || undefined,
     quantity,
-    totalAmount: type.price * quantity,
+    totalAmount: grossAmount,
+    platformFee: fee.platformFee,
+    netAmount: fee.netAmount,
     currency: type.currency,
     status: type.price > 0 ? "pending_payment" : "paid",
     qrCode,

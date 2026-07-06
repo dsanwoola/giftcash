@@ -11,6 +11,7 @@ export function SiteHeader() {
           <Link href="/#how" className="hover:text-ink">How it works</Link>
           <Link href="/#occasions" className="hover:text-ink">Occasions</Link>
           <Link href="/#features" className="hover:text-ink">Features</Link>
+          <Link href="/pricing" className="hover:text-ink">Pricing</Link>
           <Link href="/dashboard" className="hover:text-ink">Dashboard</Link>
         </nav>
         <HeaderAuth />

@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { adminAuth, adminDb } from "../firebase/admin";
 import { limitForKyc } from "../compliance/limits";
 import { serviceFee } from "../money";
+import { calculatePlatformFee } from "../monetization";
 import type {
   BankAccount,
   Contribution,
@@ -248,11 +249,14 @@ function validateEventContribution(event: GiftEvent, data: ContributionData) {
 }
 
 function contributionFromData(event: GiftEvent, data: ContributionData, meta: VerifiedContributionMeta): Contribution {
+  const fee = calculatePlatformFee(data.amount, "giftcash", event.revenuePlan, event.currency);
   const c: Contribution = {
     id: nanoid(),
     name: data.anonymous ? "Anonymous" : data.name?.trim() || "A guest",
     anonymous: !!data.anonymous,
     amount: data.amount,
+    platformFee: fee.platformFee,
+    netAmount: fee.netAmount,
     paymentReference: meta.paymentReference,
     createdAt: new Date().toISOString(),
   };
