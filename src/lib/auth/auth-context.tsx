@@ -39,24 +39,22 @@ export function friendlyAuthError(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
 }
 
+function mapProfile(profile: { id: string; email?: string; phone?: string; fullName?: string; photoURL?: string }): AuthUser {
+  return {
+    uid: profile.id,
+    email: profile.email ?? null,
+    displayName: profile.fullName ?? null,
+    photoURL: profile.photoURL ?? null,
+    phoneNumber: profile.phone ?? null,
+  };
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Cloudflare build is intentionally demo-auth only until Firebase client auth is
-  // replaced with Worker/D1-backed auth endpoints. This avoids Firestore/protobuf
-  // dynamic-code-generation in the Worker server bundle.
+  // Interim mode: Worker/D1 session API with localStorage fallback for offline/demo resilience.
   const mode: Mode = "demo";
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const demoPhoneRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(DEMO_KEY);
-      setUser(raw ? (JSON.parse(raw) as AuthUser) : null);
-    } catch {
-      setUser(null);
-    }
-    setLoading(false);
-  }, []);
 
   const setDemoUser = useCallback((u: AuthUser | null) => {
     if (u) localStorage.setItem(DEMO_KEY, JSON.stringify(u));
@@ -64,7 +62,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(u);
   }, []);
 
-  const demoUser = (over: Partial<AuthUser>): AuthUser => ({
+  useEffect(() => {
+    let alive = true;
+    const restore = async () => {
+      try {
+        const res = await fetch("/api/auth/me", { cache: "no-store" });
+        if (res.ok) {
+          const payload = await res.json();
+          if (payload.user && alive) {
+            const mapped = mapProfile(payload.user);
+            setDemoUser(mapped);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {
+        // fall through to local demo session
+      }
+      try {
+        const raw = localStorage.getItem(DEMO_KEY);
+        if (alive) setUser(raw ? (JSON.parse(raw) as AuthUser) : null);
+      } catch {
+        if (alive) setUser(null);
+      }
+      if (alive) setLoading(false);
+    };
+    restore();
+    return () => { alive = false; };
+  }, [setDemoUser]);
+
+  const localUser = (over: Partial<AuthUser>): AuthUser => ({
     uid: DEMO_USER_ID,
     email: null,
     displayName: "Demo Sender",
@@ -73,17 +100,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ...over,
   });
 
-  const signInWithEmail = useCallback(async (email: string) => {
-    setDemoUser(demoUser({ email, displayName: email.split("@")[0] }));
+  const startSession = useCallback(async (body: { name?: string; email?: string; phone?: string }) => {
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error ?? "Could not start session.");
+      const mapped = mapProfile(payload.user);
+      setDemoUser(mapped);
+      return;
+    } catch {
+      if (body.email) setDemoUser(localUser({ email: body.email, displayName: body.name || body.email.split("@")[0] }));
+      else setDemoUser(localUser({ phoneNumber: body.phone ?? null, displayName: body.name || "Demo Sender" }));
+    }
   }, [setDemoUser]);
+
+  const signInWithEmail = useCallback(async (email: string) => {
+    await startSession({ email: email.trim().toLowerCase() });
+  }, [startSession]);
 
   const signUpWithEmail = useCallback(async (name: string, email: string) => {
-    setDemoUser(demoUser({ email, displayName: name || email.split("@")[0] }));
-  }, [setDemoUser]);
+    await startSession({ name, email: email.trim().toLowerCase() });
+  }, [startSession]);
 
   const signInWithGoogle = useCallback(async () => {
-    setDemoUser(demoUser({ email: "demo@gmail.com", displayName: "Demo Sender", photoURL: null }));
-  }, [setDemoUser]);
+    await startSession({ name: "Demo Sender", email: "demo@gmail.com" });
+  }, [startSession]);
 
   const startPhoneSignIn = useCallback(async (phoneNumber: string) => {
     demoPhoneRef.current = phoneNumber;
@@ -91,10 +136,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const confirmPhoneCode = useCallback(async (code: string) => {
     if (code.replace(/\D/g, "").length < 4) throw new Error("Enter the 4-digit code.");
-    setDemoUser(demoUser({ phoneNumber: demoPhoneRef.current, displayName: "Demo Sender" }));
-  }, [setDemoUser]);
+    await startSession({ phone: demoPhoneRef.current ?? undefined, name: "Demo Sender" });
+  }, [startSession]);
 
-  const signOutUser = useCallback(async () => setDemoUser(null), [setDemoUser]);
+  const signOutUser = useCallback(async () => {
+    await fetch("/api/auth/me", { method: "DELETE" }).catch(() => undefined);
+    setDemoUser(null);
+  }, [setDemoUser]);
 
   return (
     <AuthContext.Provider

@@ -31,6 +31,10 @@ export function EventPage({ slug }: { slug: string }) {
   const [sheet, setSheet] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
+  const [rsvpName, setRsvpName] = useState("");
+  const [ticketBuyer, setTicketBuyer] = useState("");
+  const [checkCode, setCheckCode] = useState("");
+  const [accessMsg, setAccessMsg] = useState("");
   // Picked up when a guest scans a per-table QR code (/event/slug?t=N).
   const [table] = useState<string | null>(() =>
     typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("t") : null,
@@ -71,6 +75,18 @@ export function EventPage({ slug }: { slug: string }) {
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(payload.error ?? "Could not prepare bank transfer details.");
     return payload as BankTransferIntentView;
+  };
+  const runAccessAction = async (path: string, body: Record<string, unknown>, success: string) => {
+    setAccessMsg("");
+    const res = await fetch(`/api/events/${slug}/${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(payload.error ?? "Action failed.");
+    setAccessMsg(success);
+    window.dispatchEvent(new Event("giftcash:change"));
   };
   const inviteMessage = `🎉 You're invited to ${event.celebrants}!\n${dateStr}\n\nIf you'd like to bless us with a cash gift, tap below — it only takes a moment. 💛`;
 
@@ -133,6 +149,27 @@ export function EventPage({ slug }: { slug: string }) {
                 Table planner ready: {event.tables?.reduce((sum, t) => sum + t.capacity, 0)} total seats across {event.tables?.length} tables.
               </p>
             )}
+            <div className="mt-4 space-y-3 rounded-2xl border border-ink/5 bg-white p-3">
+              {event.rsvpEnabled && (
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input className="rounded-xl border border-ink/10 px-3 py-2 text-sm outline-none focus:border-brand" placeholder="Your name for RSVP" value={rsvpName} onChange={(e) => setRsvpName(e.target.value)} />
+                  <button className="rounded-xl bg-brand px-4 py-2 text-sm font-medium text-white" onClick={() => runAccessAction("rsvp", { name: rsvpName || "Guest", tableId: table ?? undefined }, "RSVP saved — your digital invite pass is ready.").catch((e) => setAccessMsg(e.message))}>RSVP</button>
+                </div>
+              )}
+              {event.ticketingEnabled && Boolean(event.ticketTypes?.length) && (
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input className="rounded-xl border border-ink/10 px-3 py-2 text-sm outline-none focus:border-brand" placeholder="Buyer name" value={ticketBuyer} onChange={(e) => setTicketBuyer(e.target.value)} />
+                  <button className="rounded-xl bg-gold px-4 py-2 text-sm font-medium text-ink" onClick={() => runAccessAction("tickets", { ticketTypeId: event.ticketTypes?.[0]?.id, buyerName: ticketBuyer || "Guest", quantity: 1, tableId: table ?? undefined }, "Ticket reserved — QR pass generated.").catch((e) => setAccessMsg(e.message))}>Get ticket</button>
+                </div>
+              )}
+              {event.checkInEnabled && (
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <input className="rounded-xl border border-ink/10 px-3 py-2 text-sm outline-none focus:border-brand" placeholder="QR / invite / ticket code" value={checkCode} onChange={(e) => setCheckCode(e.target.value)} />
+                  <button className="rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white" onClick={() => runAccessAction("check-in", { code: checkCode }, "Check-in recorded.").catch((e) => setAccessMsg(e.message))}>Check in</button>
+                </div>
+              )}
+              {accessMsg && <p className="text-xs font-medium text-brand">{accessMsg}</p>}
+            </div>
           </div>
         )}
 
