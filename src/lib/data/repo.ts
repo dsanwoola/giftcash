@@ -1,16 +1,17 @@
 "use client";
 
-import { isFirebaseConfigured } from "../firebase/client";
 import { demoRepo } from "./demo-repo";
-import { firestoreRepo } from "./firestore-repo";
 import type { GiftRepo } from "./repo-types";
 
 /**
- * The active data layer. Uses live Firebase when the public config is present
- * (see .env.local), otherwise the localStorage demo store. All consumers import
- * `repo` from here, so switching backends touches no UI code.
+ * Occasion Cloudflare frontend currently uses the local demo repository.
+ *
+ * Firebase client imports are intentionally not loaded from the Cloudflare Worker
+ * bundle because Firestore's protobuf runtime uses dynamic code generation, which
+ * Cloudflare Workers disallow. Live persistence is being moved to the Worker/D1
+ * API layer instead.
  */
-export const repo: GiftRepo = isFirebaseConfigured ? firestoreRepo : demoRepo;
+export const repo: GiftRepo = demoRepo;
 
 export type Repo = GiftRepo;
 export type {
