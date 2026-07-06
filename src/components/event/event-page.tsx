@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { CalendarDays, FileSpreadsheet, Gift, HelpCircle, Loader2, MonitorPlay, QrCode, Settings2, Share2 } from "lucide-react";
+import { CalendarDays, FileSpreadsheet, Gift, HelpCircle, Loader2, MonitorPlay, QrCode, Settings2, Share2, Ticket, ClipboardCheck, Armchair, DoorOpen } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export function EventPage({ slug }: { slug: string }) {
     );
   }
 
-  const meta = occasionById(event.type);
+  const meta = occasionById(event.type as never);
   const total = event.contributions.reduce((s, c) => s + c.amount, 0);
   const dateStr = new Date(event.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const url = typeof window !== "undefined" ? window.location.href : "";
@@ -84,6 +84,37 @@ export function EventPage({ slug }: { slug: string }) {
         </div>
 
         {event.story && <p className="mt-5 rounded-2xl bg-white/70 p-5 text-center text-sm text-muted">{event.story}</p>}
+
+        {(event.ticketingEnabled || event.rsvpEnabled || event.seatingEnabled || event.checkInEnabled) && (
+          <div className="mt-5 rounded-3xl border border-ink/5 bg-white/80 p-5 shadow-soft">
+            <p className="font-display text-xl font-semibold">Event access</p>
+            <p className="mt-1 text-sm text-muted">RSVP, tickets, tables and QR check-in are handled from this Occasion page.</p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {event.rsvpEnabled && <FeaturePill icon={ClipboardCheck} title="RSVP" body="Guests confirm attendance and plus-ones." />}
+              {event.ticketingEnabled && <FeaturePill icon={Ticket} title="Tickets" body={`${event.ticketTypes?.length ?? 0} ticket type${(event.ticketTypes?.length ?? 0) === 1 ? "" : "s"} available.`} />}
+              {event.seatingEnabled && <FeaturePill icon={Armchair} title="Tables" body={`${event.tables?.length ?? 0} table${(event.tables?.length ?? 0) === 1 ? "" : "s"} planned.`} />}
+              {event.checkInEnabled && <FeaturePill icon={DoorOpen} title="QR check-in" body="Digital passes can be scanned at the venue." />}
+            </div>
+            {event.ticketingEnabled && Boolean(event.ticketTypes?.length) && (
+              <div className="mt-4 space-y-2">
+                {event.ticketTypes?.map((ticket) => (
+                  <div key={ticket.id} className="flex items-center justify-between gap-4 rounded-2xl bg-brand-soft/30 p-3">
+                    <div>
+                      <p className="font-medium">{ticket.name}</p>
+                      <p className="text-xs text-muted">{ticket.description ?? "Event pass"} · {Math.max(0, ticket.quantity - ticket.sold)} left</p>
+                    </div>
+                    <p className="font-semibold text-brand">{ticket.price > 0 ? formatMoney(ticket.price, ticket.currency) : "Free"}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            {event.seatingEnabled && Boolean(event.tables?.length) && (
+              <p className="mt-4 rounded-2xl bg-gold-soft/50 px-4 py-3 text-sm text-ink/75">
+                Table planner ready: {event.tables?.reduce((sum, t) => sum + t.capacity, 0)} total seats across {event.tables?.length} tables.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Venue QR */}
         <div className="mt-5 flex items-center gap-4 rounded-3xl border border-ink/5 bg-white/70 p-4 sm:p-5">
@@ -135,6 +166,16 @@ export function EventPage({ slug }: { slug: string }) {
         qrLabel="Scan to gift at the venue"
         calendar={{ title: event.title, details: `Celebrate ${event.celebrants}. Send a cash gift: ${url}`, start: event.date }}
       />
+    </div>
+  );
+}
+
+function FeaturePill({ icon: Icon, title, body }: { icon: React.ElementType; title: string; body: string }) {
+  return (
+    <div className="rounded-2xl border border-ink/5 bg-white p-3">
+      <span className="grid h-9 w-9 place-items-center rounded-xl bg-brand-soft text-brand"><Icon className="h-4 w-4" /></span>
+      <p className="mt-2 text-sm font-semibold">{title}</p>
+      <p className="text-xs text-muted">{body}</p>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Loader2, Lock } from "lucide-react";
+import { CheckCircle2, Loader2, Lock, Ticket, Armchair, ClipboardCheck, QrCode } from "lucide-react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { CURRENCIES, toMinor } from "@/lib/money";
 import { repo } from "@/lib/data/repo";
 import { useAuth } from "@/lib/auth/auth-context";
 import { OCCASIONS, occasionById } from "@/lib/occasions";
-import type { CurrencyCode, EventType, GiftEvent } from "@/lib/types";
+import type { CurrencyCode, EventTable, EventTicketType, EventType, GiftEvent } from "@/lib/types";
 
 const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
 
@@ -57,6 +57,17 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
   const [showTotal, setShowTotal] = useState(false);
   const [campaignMode, setCampaignMode] = useState(false);
   const [maxContribution, setMaxContribution] = useState("");
+  const [ticketingEnabled, setTicketingEnabled] = useState(true);
+  const [rsvpEnabled, setRsvpEnabled] = useState(true);
+  const [seatingEnabled, setSeatingEnabled] = useState(true);
+  const [checkInEnabled, setCheckInEnabled] = useState(true);
+  const [regularTicketPrice, setRegularTicketPrice] = useState("");
+  const [regularTicketQty, setRegularTicketQty] = useState("100");
+  const [vipTicketPrice, setVipTicketPrice] = useState("");
+  const [vipTicketQty, setVipTicketQty] = useState("20");
+  const [tableCapacity, setTableCapacity] = useState("10");
+  const [tableCount, setTableCount] = useState("10");
+  const [tablePrice, setTablePrice] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -69,7 +80,46 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
     if (Number.isNaN(startsAt.getTime()) || Number.isNaN(endsAt.getTime())) return setError("Enter a valid event date and time.");
     if (endsAt <= startsAt) return setError("Event end time must be after the start time.");
     setError(""); setBusy(true);
-    const chosen = occasionById(type);
+    const chosen = occasionById(type as never);
+    const ticketTypes: EventTicketType[] = [];
+    if (ticketingEnabled) {
+      ticketTypes.push({
+        id: "regular",
+        name: "Regular",
+        description: "General admission event pass",
+        price: regularTicketPrice ? toMinor(Number(regularTicketPrice)) : 0,
+        currency,
+        quantity: Math.max(0, Number(regularTicketQty) || 0),
+        sold: 0,
+        benefits: ["Digital QR pass", "Event access"],
+        active: true,
+      });
+      if (vipTicketPrice || Number(vipTicketQty) > 0) {
+        ticketTypes.push({
+          id: "vip",
+          name: "VIP",
+          description: "Premium access for special guests",
+          price: vipTicketPrice ? toMinor(Number(vipTicketPrice)) : 0,
+          currency,
+          quantity: Math.max(0, Number(vipTicketQty) || 0),
+          sold: 0,
+          benefits: ["VIP digital pass", "Priority check-in", "Premium seating"],
+          active: true,
+        });
+      }
+    }
+    const tables: EventTable[] = seatingEnabled
+      ? Array.from({ length: Math.max(0, Number(tableCount) || 0) }, (_, index) => ({
+          id: `table-${index + 1}`,
+          name: `Table ${index + 1}`,
+          section: index < 2 ? "VIP" : "Regular",
+          capacity: Math.max(1, Number(tableCapacity) || 10),
+          price: tablePrice ? toMinor(Number(tablePrice)) : undefined,
+          currency,
+          paymentStatus: "pending",
+          assignedGuestIds: [],
+        }))
+      : [];
     const event = await repo.createEvent({
       type,
       title: title.trim() || `${chosen.label} of ${celebrants.trim()}`,
@@ -85,6 +135,14 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
       campaignMode: campaignMode || undefined,
       maxContribution: campaignMode && maxContribution ? toMinor(Number(maxContribution)) : undefined,
       isPublic: true,
+      ticketingEnabled,
+      rsvpEnabled,
+      seatingEnabled,
+      checkInEnabled,
+      ticketTypes,
+      tables,
+      guests: [],
+      tickets: [],
       organizerName,
     });
     setBusy(false);
@@ -126,6 +184,34 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           </div>
           <Field label="Fundraising goal (optional)"><input className={inputCls} inputMode="numeric" value={goal} onChange={(e) => setGoal(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="e.g. 500000 — shows a goal thermometer on the big screen" /></Field>
           <Field label="Story / welcome note (optional)"><textarea rows={3} className={inputCls} value={story} onChange={(e) => setStory(e.target.value)} placeholder="A warm note for your guests…" /></Field>
+
+          <div className="space-y-4 rounded-3xl border border-brand/15 bg-white/75 p-4 shadow-soft">
+            <div>
+              <p className="font-display text-lg font-semibold">Occasion modules</p>
+              <p className="text-sm text-muted">Turn this event into a full invite, ticketing, RSVP, table and check-in page.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ToggleCard icon={Ticket} title="Ticket sales" enabled={ticketingEnabled} onClick={() => setTicketingEnabled((v) => !v)} />
+              <ToggleCard icon={ClipboardCheck} title="RSVP" enabled={rsvpEnabled} onClick={() => setRsvpEnabled((v) => !v)} />
+              <ToggleCard icon={Armchair} title="Tables & seating" enabled={seatingEnabled} onClick={() => setSeatingEnabled((v) => !v)} />
+              <ToggleCard icon={QrCode} title="QR check-in" enabled={checkInEnabled} onClick={() => setCheckInEnabled((v) => !v)} />
+            </div>
+            {ticketingEnabled && (
+              <div className="grid gap-3 rounded-2xl bg-brand-soft/30 p-3 sm:grid-cols-2">
+                <Field label="Regular ticket price"><input className={inputCls} inputMode="numeric" value={regularTicketPrice} onChange={(e) => setRegularTicketPrice(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="0 for free RSVP" /></Field>
+                <Field label="Regular ticket quantity"><input className={inputCls} inputMode="numeric" value={regularTicketQty} onChange={(e) => setRegularTicketQty(e.target.value.replace(/[^0-9]/g, ""))} /></Field>
+                <Field label="VIP ticket price"><input className={inputCls} inputMode="numeric" value={vipTicketPrice} onChange={(e) => setVipTicketPrice(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="optional" /></Field>
+                <Field label="VIP ticket quantity"><input className={inputCls} inputMode="numeric" value={vipTicketQty} onChange={(e) => setVipTicketQty(e.target.value.replace(/[^0-9]/g, ""))} /></Field>
+              </div>
+            )}
+            {seatingEnabled && (
+              <div className="grid gap-3 rounded-2xl bg-gold-soft/40 p-3 sm:grid-cols-3">
+                <Field label="Tables"><input className={inputCls} inputMode="numeric" value={tableCount} onChange={(e) => setTableCount(e.target.value.replace(/[^0-9]/g, ""))} /></Field>
+                <Field label="Seats per table"><input className={inputCls} inputMode="numeric" value={tableCapacity} onChange={(e) => setTableCapacity(e.target.value.replace(/[^0-9]/g, ""))} /></Field>
+                <Field label="Table price"><input className={inputCls} inputMode="numeric" value={tablePrice} onChange={(e) => setTablePrice(e.target.value.replace(/[^0-9.]/g, ""))} placeholder="optional" /></Field>
+              </div>
+            )}
+          </div>
 
           <button onClick={() => setShowTotal((v) => !v)} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
             <span>👁️ Show total received to guests</span>
@@ -198,4 +284,14 @@ function SuccessShare({ event }: { event: GiftEvent }) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block space-y-1.5"><span className="text-sm text-muted">{label}</span>{children}</label>;
+}
+
+function ToggleCard({ icon: Icon, title, enabled, onClick }: { icon: React.ElementType; title: string; enabled: boolean; onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className={`flex items-center gap-3 rounded-2xl border p-3 text-left transition ${enabled ? "border-brand/30 bg-brand-soft/40" : "border-ink/10 bg-white"}`}>
+      <span className={`grid h-10 w-10 place-items-center rounded-xl ${enabled ? "bg-brand text-white" : "bg-ink/5 text-muted"}`}><Icon className="h-4 w-4" /></span>
+      <span className="flex-1 text-sm font-medium">{title}</span>
+      <span className={`h-5 w-9 rounded-full p-0.5 ${enabled ? "bg-brand" : "bg-ink/15"}`}><span className={`block h-4 w-4 rounded-full bg-white transition ${enabled ? "translate-x-4" : ""}`} /></span>
+    </button>
+  );
 }

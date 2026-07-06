@@ -7,6 +7,10 @@ import type {
   GroupGift,
   LedgerEntry,
   OccasionId,
+  EventTicketType,
+  EventTable,
+  EventGuest,
+  EventTicket,
   ThankYou,
   ThemeId,
   UserProfile,
@@ -71,6 +75,14 @@ export interface CreateEventInput {
   settlementAccount?: BankAccount;
   payoutProvider?: "paystack" | "manual";
   isPublic: boolean;
+  ticketingEnabled?: boolean;
+  rsvpEnabled?: boolean;
+  seatingEnabled?: boolean;
+  checkInEnabled?: boolean;
+  ticketTypes?: EventTicketType[];
+  tables?: EventTable[];
+  guests?: EventGuest[];
+  tickets?: EventTicket[];
   organizerName: string;
 }
 

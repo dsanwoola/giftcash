@@ -260,11 +260,75 @@ export interface GroupGift {
   createdAt: string;
 }
 
-/* ----- Event gifting (spec section H) ----- */
-export type EventType = OccasionId;
+/* ----- Occasion event commerce (tickets, RSVP, seating, check-in) ----- */
+export type EventType = OccasionId | "concert" | "dinner" | "conference" | "fundraiser" | "party";
+export type TicketStatus = "reserved" | "pending_payment" | "paid" | "cancelled" | "checked_in" | "refunded";
+export type RsvpStatus = "invited" | "opened" | "yes" | "no" | "maybe" | "approved" | "checked_in" | "no_show";
 
 /** Party-screen gift sound, shared so a phone "host console" can change it live. */
 export type SoundTheme = "fanfare" | "chime" | "arcade" | "boom";
+
+export interface EventTicketType {
+  id: string;
+  name: string;
+  description?: string;
+  price: number; // minor units; 0 = free RSVP pass
+  currency: CurrencyCode;
+  quantity: number;
+  sold: number;
+  benefits?: string[];
+  saleStartsAt?: string;
+  saleEndsAt?: string;
+  active: boolean;
+}
+
+export interface EventTable {
+  id: string;
+  name: string;
+  section?: string;
+  capacity: number;
+  price?: number; // minor units for whole-table sale/reservation
+  currency: CurrencyCode;
+  buyerName?: string;
+  buyerEmail?: string;
+  paymentStatus?: PaymentStatus | "reserved";
+  assignedGuestIds: string[];
+}
+
+export interface EventGuest {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  category?: "family" | "friend" | "colleague" | "vip" | "vendor" | "media" | "protocol" | "sponsor" | "other";
+  rsvpStatus: RsvpStatus;
+  plusOnes: number;
+  tableId?: string;
+  seatLabel?: string;
+  inviteCode: string;
+  ticketId?: string;
+  checkedInAt?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface EventTicket {
+  id: string;
+  eventSlug: string;
+  ticketTypeId: string;
+  buyerName: string;
+  buyerEmail?: string;
+  quantity: number;
+  totalAmount: number;
+  currency: CurrencyCode;
+  status: TicketStatus;
+  qrCode: string;
+  tableId?: string;
+  guestIds: string[];
+  paymentReference?: string;
+  createdAt: string;
+  checkedInAt?: string;
+}
 
 export interface GiftEvent {
   id: string;
@@ -288,6 +352,14 @@ export interface GiftEvent {
   settlementAccount?: BankAccount; // account where event gifts are routed/settled
   payoutProvider?: "paystack" | "manual";
   isPublic: boolean;
+  ticketingEnabled?: boolean;
+  rsvpEnabled?: boolean;
+  seatingEnabled?: boolean;
+  checkInEnabled?: boolean;
+  ticketTypes?: EventTicketType[];
+  tables?: EventTable[];
+  guests?: EventGuest[];
+  tickets?: EventTicket[];
   contributions: Contribution[];
   createdAt: string;
 }

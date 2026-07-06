@@ -8,29 +8,30 @@ export function SiteFooter() {
         <div className="md:col-span-2">
           <Logo />
           <p className="mt-3 max-w-xs text-sm text-muted">
-            Don&apos;t just send money. Send a moment. Beautiful digital cash gifts
-            for every celebration that matters.
+            One link for invites, tickets, tables, GiftCash gifts, RSVP and guest check-in.
           </p>
         </div>
         <div className="text-sm">
           <p className="font-medium">Product</p>
           <ul className="mt-3 space-y-2 text-muted">
-            <li><Link href="/gift/create" className="hover:text-ink">Send a Gift</Link></li>
+            <li><Link href="/event/create" className="hover:text-ink">Create an Occasion</Link></li>
+            <li><Link href="/gift/create" className="hover:text-ink">Send GiftCash</Link></li>
             <li><Link href="/dashboard" className="hover:text-ink">Dashboard</Link></li>
             <li><Link href="/dashboard/wallet" className="hover:text-ink">Wallet</Link></li>
           </ul>
         </div>
         <div className="text-sm">
-          <p className="font-medium">Occasions</p>
+          <p className="font-medium">Modules</p>
           <ul className="mt-3 space-y-2 text-muted">
-            <li>Birthdays</li>
-            <li>Weddings &amp; events</li>
-            <li>Graduations</li>
+            <li>Invites &amp; RSVP</li>
+            <li>Ticketing &amp; tables</li>
+            <li>QR check-in</li>
+            <li>GiftCash</li>
           </ul>
         </div>
       </div>
       <div className="border-t border-ink/5 py-5 text-center text-xs text-muted">
-        © {new Date().getFullYear()} Gift Cash. Built for celebrations across Africa and beyond.
+        © {new Date().getFullYear()} Occasion.ng. Built for celebrations across Africa and beyond.
       </div>
     </footer>
   );

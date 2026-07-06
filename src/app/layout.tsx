@@ -15,9 +15,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Gift Cash — Don't just send money. Send a moment.",
+  title: "Occasion.ng — Invites, tickets, tables, gifts, and check-in",
   description:
-    "Gift Cash turns ordinary cash gifts into beautiful digital experiences for birthdays, weddings, graduations, Valentine's Day, and every celebration that matters.",
+    "Occasion.ng helps you create event pages, sell tickets, manage RSVP, arrange tables, collect GiftCash gifts, and check guests in from one link.",
 };
 
 export const viewport: Viewport = {
