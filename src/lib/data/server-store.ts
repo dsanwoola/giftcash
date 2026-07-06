@@ -17,6 +17,7 @@ import type {
   Withdrawal,
 } from "../types";
 import type { ContributionData, CreateGiftInput } from "./repo-types";
+import { buildSeed } from "./seed";
 
 /**
  * Server-authoritative operations (Admin SDK). These are the only writers to the
@@ -269,8 +270,13 @@ export async function appendVerifiedEventContribution(slug: string, data: Contri
   const ref = db.collection("events").doc(slug);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const event = snap.data() as GiftEvent | undefined;
-    if (!event) throw new HttpError(404, "Event not found");
+    let event = snap.data() as GiftEvent | undefined;
+    if (!event) {
+      const seeded = buildSeed().events[slug];
+      if (!seeded) throw new HttpError(404, "Event not found");
+      event = seeded;
+      tx.set(ref, seeded);
+    }
     validateEventContribution(event, data);
     const current = event.contributions ?? [];
     const existing = current.find((c) => c.paymentReference === meta.paymentReference);

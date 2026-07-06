@@ -9,6 +9,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ShareHub } from "@/components/share/share-hub";
 import { CURRENCIES, toMinor } from "@/lib/money";
 import { repo } from "@/lib/data/repo";
+import type { CreateEventInput } from "@/lib/data/repo-types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { OCCASIONS, occasionById } from "@/lib/occasions";
 import type { CurrencyCode, EventTable, EventTicketType, EventType, GiftEvent } from "@/lib/types";
@@ -120,7 +121,7 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           assignedGuestIds: [],
         }))
       : [];
-    const event = await repo.createEvent({
+    const input: CreateEventInput = {
       type,
       title: title.trim() || `${chosen.label} of ${celebrants.trim()}`,
       celebrants: celebrants.trim(),
@@ -144,9 +145,24 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
       guests: [],
       tickets: [],
       organizerName,
-    });
-    setBusy(false);
-    onCreated(event);
+    };
+    try {
+      const res = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.error ?? "Could not create event.");
+      onCreated(payload as GiftEvent);
+      return;
+    } catch (apiError) {
+      console.warn("Falling back to local Occasion event store", apiError);
+      const event = await repo.createEvent(input);
+      onCreated(event);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (

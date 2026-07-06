@@ -12,11 +12,22 @@ import { ShareModal } from "@/components/share/share-modal";
 import { SetupGuide } from "@/components/party/setup-guide";
 import { useRepoData } from "@/lib/data/use-repo";
 import { repo } from "@/lib/data/repo";
+import type { GiftEvent } from "@/lib/types";
 import { formatMoney } from "@/lib/money";
 import { occasionById } from "@/lib/occasions";
 
+async function loadEvent(slug: string): Promise<GiftEvent | undefined> {
+  try {
+    const res = await fetch(`/api/events/${slug}`, { cache: "no-store" });
+    if (res.ok) return (await res.json()) as GiftEvent;
+  } catch (error) {
+    console.warn("Falling back to local Occasion event store", error);
+  }
+  return (await repo.getEvent(slug)) ?? undefined;
+}
+
 export function EventPage({ slug }: { slug: string }) {
-  const { data: event, loading } = useRepoData(() => repo.getEvent(slug), [slug]);
+  const { data: event, loading } = useRepoData(() => loadEvent(slug), [slug]);
   const [sheet, setSheet] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -40,7 +51,16 @@ export function EventPage({ slug }: { slug: string }) {
   const url = typeof window !== "undefined" ? window.location.href : "";
 
   const contribute = async (c: ContributionInput) => {
-    await repo.contributeToEvent(slug, { ...c, table: table ?? undefined });
+    const res = await fetch(`/api/events/${slug}/contribute`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...c, table: table ?? undefined }),
+    });
+    if (!res.ok) {
+      const payload = await res.json().catch(() => ({}));
+      throw new Error(payload.error ?? "Could not add contribution.");
+    }
+    window.dispatchEvent(new Event("giftcash:change"));
   };
   const startBankTransfer = async (c: ContributionInput): Promise<BankTransferIntentView> => {
     const res = await fetch(`/api/events/${slug}/payments/bank-transfer`, {
