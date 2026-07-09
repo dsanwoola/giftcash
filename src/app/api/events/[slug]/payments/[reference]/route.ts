@@ -4,16 +4,17 @@ import { HttpError } from "@/lib/data/server-store";
 import { adminDb } from "@/lib/firebase/admin";
 import type { BankTransferPaymentIntent } from "@/lib/payments/bank-transfer";
 import type { PaystackEventPaymentIntent } from "@/lib/payments/event-payments";
+import type { PaysureEventPaymentIntent } from "@/lib/payments/paysure-event-payments";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string; reference: string }> }) {
   try {
     const { slug, reference } = await ctx.params;
     const snap = await adminDb().collection("payment_intents").doc(reference.toUpperCase()).get();
-    const intent = snap.data() as (BankTransferPaymentIntent | PaystackEventPaymentIntent | undefined);
+    const intent = snap.data() as (BankTransferPaymentIntent | PaystackEventPaymentIntent | PaysureEventPaymentIntent | undefined);
     if (!intent || intent.eventSlug !== slug) throw new HttpError(404, "Payment reference not found");
-    if ("provider" in intent && intent.provider === "paystack") {
+    if ("provider" in intent && (intent.provider === "paystack" || intent.provider === "paysure")) {
       return NextResponse.json({
-        provider: "paystack",
+        provider: intent.provider,
         reference: intent.reference,
         status: intent.status,
         expectedAmount: intent.expectedAmount,

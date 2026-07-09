@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, ClipboardCopy, Clock, Loader2, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ClipboardCopy, Clock, CreditCard, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CURRENCIES, formatMoney, serviceFee, toMinor } from "@/lib/money";
 import { burst } from "@/lib/confetti";
@@ -16,6 +16,8 @@ export interface ContributionInput {
   anonymous: boolean;
   amount: number; // minor units
   message?: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface BankTransferIntentView {
@@ -39,6 +41,7 @@ export function ContributeSheet({
   onClose,
   onContribute,
   onStartBankTransfer,
+  onStartPaysureCheckout,
   pollBankTransfer,
   currency,
   ctaLabel = "Contribute",
@@ -49,6 +52,7 @@ export function ContributeSheet({
   onClose: () => void;
   onContribute: (c: ContributionInput) => Promise<void>;
   onStartBankTransfer?: (c: ContributionInput) => Promise<BankTransferIntentView>;
+  onStartPaysureCheckout?: (c: ContributionInput) => Promise<{ authorizationUrl: string; reference: string }>;
   pollBankTransfer?: (reference: string) => Promise<Pick<BankTransferIntentView, "status"> & { reviewReason?: string }>;
   currency: CurrencyCode;
   ctaLabel?: string;
@@ -56,6 +60,8 @@ export function ContributeSheet({
   maxAmount?: number; // campaign mode: per-contribution cap (minor units)
 }) {
   const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [anonymous, setAnonymous] = useState(false);
   const [amount, setAmount] = useState("5000");
   const [message, setMessage] = useState("");
@@ -96,11 +102,18 @@ export function ContributeSheet({
     if (requireName && !name.trim()) return setError("Your name is required for this event.");
     if (!isAnon && !name.trim()) return setError("Add your name (or contribute anonymously).");
     if (amountMinor < toMinor(100)) return setError("Enter a valid amount.");
+    if (onStartPaysureCheckout && !email.trim()) return setError("Add your email for the payment receipt.");
+    if (onStartPaysureCheckout && !phone.replace(/\D/g, "")) return setError("Add your phone number for checkout.");
     if (maxAmount && amountMinor > maxAmount) return setError(`The maximum contribution is ${formatMoney(maxAmount, cur)}.`);
     setError("");
     setStep("paying");
-    const input = { name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined };
+    const input = { name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined, email: email.trim() || undefined, phone: phone.trim() || undefined };
     try {
+      if (onStartPaysureCheckout) {
+        const checkout = await onStartPaysureCheckout(input);
+        window.location.href = checkout.authorizationUrl;
+        return;
+      }
       if (onStartBankTransfer) {
         const bankIntent = await onStartBankTransfer(input);
         setIntent(bankIntent);
@@ -120,6 +133,8 @@ export function ContributeSheet({
   const close = () => {
     setStep("form");
     setName("");
+    setEmail("");
+    setPhone("");
     setAmount("5000");
     setMessage("");
     setAnonymous(false);
@@ -217,6 +232,12 @@ export function ContributeSheet({
                   </div>
                   {maxAmount && <p className="-mt-1 text-xs text-muted">Maximum {formatMoney(maxAmount, cur)} per donor for this event.</p>}
                   <input className={inputCls} placeholder={requireName ? "Your full name (required)" : "Your name"} value={name} onChange={(e) => setName(e.target.value)} disabled={isAnon} />
+                  {onStartPaysureCheckout && (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <input className={inputCls} type="email" placeholder="Email for receipt" value={email} onChange={(e) => setEmail(e.target.value)} />
+                      <input className={inputCls} inputMode="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    </div>
+                  )}
                   <textarea className={inputCls} rows={2} placeholder="Add a message (optional)" value={message} onChange={(e) => setMessage(e.target.value)} />
                   {!requireName && (
                     <button onClick={() => setAnonymous((v) => !v)} className="flex w-full items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
@@ -232,8 +253,8 @@ export function ContributeSheet({
                     <div className="mt-1 flex justify-between font-semibold"><span>{onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
                   </div>
                   {error && <p className="text-sm text-pink">{error}</p>}
-                  <Button onClick={submit} size="lg" className="w-full">{onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
-                  <p className="text-center text-xs text-muted">{onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
+                  <Button onClick={submit} size="lg" className="w-full">{onStartPaysureCheckout ? <><CreditCard className="h-4 w-4" /> Pay securely with Paysure</> : onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
+                  <p className="text-center text-xs text-muted">{onStartPaysureCheckout ? "You’ll be redirected to Paysure checkout for card, USSD or bank transfer." : onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
                 </div>
               </>
             )}

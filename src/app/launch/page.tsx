@@ -131,10 +131,11 @@ export default function LaunchPage() {
                 <div>
                   <h2 className="font-display text-2xl font-semibold">Payment launch gate</h2>
                   <p className="mt-2 text-sm leading-6 text-amber-900/80">
-                    Paystack checkout, transaction verification and webhook signature checks are implemented. Before public paid events, add the Paystack server secret to Firebase App Hosting and configure the Paystack webhook URL.
+                    Paystack/Paysure checkout, transaction verification and webhook checks are implemented. Before public paid events, add the payment provider credentials to Firebase App Hosting and configure the provider webhook URL.
                   </p>
                   <div className="mt-4 rounded-2xl bg-white/70 p-4 text-sm text-amber-950">
-                    <p className="font-semibold">Webhook URL</p>
+                    <p className="font-semibold">Webhook URLs</p>
+                    <code className="mt-1 block break-all text-xs">https://occasion.ng/api/payments/paysure/webhook</code>
                     <code className="mt-1 block break-all text-xs">https://occasion.ng/api/payments/paystack/webhook</code>
                   </div>
                   <p className="mt-4 text-xs text-amber-900/70">

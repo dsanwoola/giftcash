@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { ContributionWall } from "@/components/social/contribution-wall";
-import { ContributeSheet, type BankTransferIntentView, type ContributionInput } from "@/components/social/contribute-sheet";
+import { ContributeSheet, type ContributionInput } from "@/components/social/contribute-sheet";
 import { ShareModal } from "@/components/share/share-modal";
 import { SetupGuide } from "@/components/party/setup-guide";
 import { useRepoData } from "@/lib/data/use-repo";
@@ -66,15 +66,15 @@ export function EventPage({ slug }: { slug: string }) {
     }
     window.dispatchEvent(new Event("giftcash:change"));
   };
-  const startBankTransfer = async (c: ContributionInput): Promise<BankTransferIntentView> => {
-    const res = await fetch(`/api/events/${slug}/payments/bank-transfer`, {
+  const startPaysureCheckout = async (c: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
+    const res = await fetch(`/api/events/${slug}/payments/paysure/initialize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...c, table: table ?? undefined }),
     });
     const payload = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payload.error ?? "Could not prepare bank transfer details.");
-    return payload as BankTransferIntentView;
+    if (!res.ok) throw new Error(payload.error ?? "Could not start Paysure checkout.");
+    return payload as { authorizationUrl: string; reference: string };
   };
   const runAccessAction = async (path: string, body: Record<string, unknown>, success: string) => {
     setAccessMsg("");
@@ -206,7 +206,7 @@ export function EventPage({ slug }: { slug: string }) {
         open={sheet}
         onClose={() => setSheet(false)}
         onContribute={contribute}
-        onStartBankTransfer={startBankTransfer}
+        onStartPaysureCheckout={startPaysureCheckout}
         currency={event.currency}
         ctaLabel={`Gift ${event.celebrants}`}
         requireName={event.campaignMode}
