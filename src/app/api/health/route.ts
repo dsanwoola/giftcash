@@ -1,22 +1,33 @@
 import { NextResponse } from "next/server";
-import { adminDb, isD1Configured } from "@/lib/firebase/admin";
+import { adminDb, isD1Configured, isFirestoreConfigured } from "@/lib/firebase/admin";
 
 /**
- * GET /api/health — Cloudflare/D1 connectivity self-check (no secrets returned).
+ * GET /api/health — production readiness self-check (no secrets returned).
  */
 export async function GET() {
   const d1Configured = isD1Configured();
-  let d1Ok = false;
+  const firestoreConfigured = isFirestoreConfigured();
+  const adminConfigured = d1Configured || firestoreConfigured;
+  let datastoreOk = false;
   let error: string | undefined;
 
-  if (d1Configured) {
+  if (adminConfigured) {
     try {
       await adminDb().collection("_healthcheck").limit(1).get();
-      d1Ok = true;
+      datastoreOk = true;
     } catch (e) {
-      error = e instanceof Error ? e.message : "D1 read failed";
+      error = e instanceof Error ? e.message : "Datastore read failed";
     }
   }
 
-  return NextResponse.json({ adminConfigured: d1Configured, d1Configured, firestoreOk: false, d1Ok, error });
+  return NextResponse.json({
+    adminConfigured,
+    datastore: d1Configured ? "cloudflare-d1" : firestoreConfigured ? "firestore" : "unconfigured",
+    d1Configured,
+    firestoreConfigured,
+    firestoreOk: firestoreConfigured && datastoreOk,
+    d1Ok: d1Configured && datastoreOk,
+    datastoreOk,
+    error,
+  });
 }

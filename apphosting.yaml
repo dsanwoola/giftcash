@@ -49,3 +49,15 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  - variable: FIREBASE_PROJECT_ID
+    value: "giftcash-d0f57"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_AUTH_PROJECT_ID
+    value: "giftcash-d0f57"
+    availability:
+      - BUILD
+      - RUNTIME

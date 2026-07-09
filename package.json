@@ -21,6 +21,7 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",
+    "firebase-admin": "^13.10.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.18.0",
     "nanoid": "^5.1.11",

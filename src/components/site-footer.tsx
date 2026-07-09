@@ -18,6 +18,7 @@ export function SiteFooter() {
             <li><Link href="/gift/create" className="hover:text-ink">Send GiftCash</Link></li>
             <li><Link href="/dashboard" className="hover:text-ink">Dashboard</Link></li>
             <li><Link href="/pricing" className="hover:text-ink">Pricing</Link></li>
+            <li><Link href="/launch" className="hover:text-ink">Launch room</Link></li>
             <li><Link href="/dashboard/wallet" className="hover:text-ink">Wallet</Link></li>
           </ul>
         </div>
