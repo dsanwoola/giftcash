@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { assignGuestToTable } from "@/lib/data/d1-events";
+import { assignGuestToTable } from "@/lib/data/firebase-events";
 import { fail } from "@/lib/api/handle";
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ slug: string }> }) {

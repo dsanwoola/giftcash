@@ -20,9 +20,9 @@ const launchItems = [
   },
   {
     title: "Custom domain cutover",
-    body: "Hostinger DNS records are prepared for occasion.ng and www.occasion.ng. Final public propagation is the remaining gate.",
+    body: "occasion.ng and www.occasion.ng are live on Firebase App Hosting with Firestore-backed API routes.",
     icon: Globe2,
-    status: "Propagating",
+    status: "Ready",
   },
   {
     title: "Monetization model",
@@ -59,7 +59,7 @@ export default function LaunchPage() {
                 Occasion.ng is ready for a controlled launch and paid pilot.
               </h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-muted sm:text-lg">
-                The product is positioned as one link for invites, RSVP, tickets, tables, GiftCash and check-in. Firebase is now the launch target; once DNS finishes moving from Cloudflare, the custom domain can be announced.
+                The product is positioned as one link for invites, RSVP, tickets, tables, GiftCash and check-in. Firebase is the production target, and the custom domain is now live on Firebase App Hosting.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
                 <ButtonLink href="/event/create" size="lg" variant="primary">Create first event <ArrowRight className="h-4 w-4" /></ButtonLink>

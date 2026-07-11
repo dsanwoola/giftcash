@@ -111,7 +111,7 @@ export function ContributeSheet({
     try {
       if (onStartPaysureCheckout) {
         const checkout = await onStartPaysureCheckout(input);
-        window.location.href = checkout.authorizationUrl;
+        window.location.assign(checkout.authorizationUrl);
         return;
       }
       if (onStartBankTransfer) {

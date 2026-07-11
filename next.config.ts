@@ -1,11 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  /* Firebase App Hosting uses the standard Next.js build output. */
 };
 
 export default nextConfig;
-
-if (process.env.CLOUDFLARE_DEV) {
-  import("@opennextjs/cloudflare").then((m) => m.initOpenNextCloudflareForDev());
-}

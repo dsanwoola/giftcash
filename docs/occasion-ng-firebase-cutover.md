@@ -1,77 +1,81 @@
-# Occasion.ng Firebase cutover
+# Occasion.ng Firebase production status
 
-Generated: 2026-07-09
+Updated: 2026-07-11
 
-## Current target
+## Current production target
 
-Firebase App Hosting backend:
+Occasion.ng is Firebase-first.
 
 - Project: `giftcash-d0f57`
-- Backend: `giftcash`
+- Firebase App Hosting backend: `giftcash`
 - Region: `us-central1`
-- Default URL: `https://giftcash--giftcash-d0f57.us-central1.hosted.app`
+- Default App Hosting URL: `https://giftcash--giftcash-d0f57.us-central1.hosted.app`
+- Custom domains:
+  - `https://occasion.ng`
+  - `https://www.occasion.ng`
+- Server datastore: Firestore via Firebase Admin SDK
 
-## Verified on Firebase default URL
+## Verified live routes
 
-The following routes returned HTTP 200 after deployment:
+The following routes should return HTTP 200 from Firebase App Hosting:
 
 - `/`
+- `/launch`
+- `/pricing`
 - `/event/create`
 - `/api/health`
-- `/pricing`
+- `/api/launch`
 
-## Firebase custom domains created
+Expected `/api/health` shape:
 
-Custom domains have been created on Firebase App Hosting for:
+```json
+{
+  "adminConfigured": true,
+  "datastore": "firestore",
+  "firestoreConfigured": true,
+  "firestoreOk": true,
+  "datastoreOk": true
+}
+```
 
-- `occasion.ng`
-- `www.occasion.ng`
+## DNS
 
-Firebase Auth authorized domains were also updated to include both domains.
+Both apex and `www` resolve to the Firebase App Hosting custom-domain IP:
 
-## DNS records required at Hostinger
+| Host | Record |
+| --- | --- |
+| `occasion.ng` | `A 35.219.200.10` |
+| `www.occasion.ng` | `A 35.219.200.10` |
 
-Move the domain DNS from Cloudflare to Hostinger first by changing nameservers at the registrar/Hostinger domain panel to Hostinger DNS, typically:
+Keep the Firebase certificate validation record required by App Hosting/Certificate Manager in DNS for renewal.
 
-- `ns1.dns-parking.com`
-- `ns2.dns-parking.com`
+## Firebase-only repository policy
 
-Then add these DNS records in Hostinger DNS Zone Editor.
+The repository should not contain runtime or deployment paths for other hosting providers. Keep:
 
-### Apex `occasion.ng`
+- `apphosting.yaml`
+- Firebase client/Admin SDK configuration
+- Firestore-backed server routes
+- Firebase deployment scripts/docs
 
-Remove Cloudflare A/AAAA records, then add:
+Do not reintroduce non-Firebase deployment scripts, worker configs, or alternate datastore migrations unless a future migration is explicitly requested.
 
-| Type | Name/Host | Value |
-| --- | --- | --- |
-| A | `@` | `35.219.200.10` |
-| TXT | `@` | `fah-claim=002-02-5277b9ce-2b4e-4200-ae51-e38eb56a56fa` |
+## Remaining launch blocker
 
-### `www.occasion.ng`
+The Firebase migration is complete, but live paid checkout remains blocked until payment provider secrets are configured in Firebase App Hosting.
 
-Remove Cloudflare A/AAAA records, then add:
+Current payment variables needed for Paysure:
 
-| Type | Name/Host | Value |
-| --- | --- | --- |
-| A | `www` | `35.219.200.10` |
-| TXT | `www` | `fah-claim=002-02-6530d98f-9e82-4d14-814d-a81d8aa7dc1d` |
+```text
+PAYSURE_APP_ID
+PAYSURE_PAYMENT_SECRET
+PAYSURE_PUBLIC_KEY
+PAYSURE_ENV
+```
 
-### SSL certificate verification
+Webhook URLs:
 
-Add this CNAME and keep it permanently for certificate renewal:
-
-| Type | Name/Host | Value |
-| --- | --- | --- |
-| CNAME | `_acme-challenge_gguz6lp36wrur55q` | `9d098a92-d024-49b0-b83c-f999cf8c0380.0.authorize.certificatemanager.goog` |
-
-## Shut down Cloudflare
-
-Only remove/disable the Cloudflare Worker/Pages app and Cloudflare DNS zone after:
-
-1. `dig occasion.ng NS` no longer returns Cloudflare nameservers.
-2. `dig occasion.ng A` returns `35.219.200.10`.
-3. `dig www.occasion.ng A` returns `35.219.200.10`.
-4. Firebase App Hosting domain status is connected/active for both domains.
-5. `https://occasion.ng`, `https://www.occasion.ng`, and `/api/health` return HTTP 200 from Firebase.
-
-Cloudflare CLI was not authenticated on the server at cutover time, so Cloudflare app shutdown requires Cloudflare dashboard/API access.
+```text
+https://occasion.ng/api/payments/paysure/webhook
+https://occasion.ng/api/payments/paystack/webhook
+```

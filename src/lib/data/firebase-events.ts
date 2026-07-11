@@ -58,18 +58,18 @@ function normalizeEvent(input: CreateEventInput): GiftEvent {
   };
 }
 
-export async function createD1Event(input: CreateEventInput): Promise<GiftEvent> {
+export async function createFirebaseEvent(input: CreateEventInput): Promise<GiftEvent> {
   const event = normalizeEvent(input);
   await adminDb().collection<GiftEvent>("events").doc(event.slug).set(event);
   return event;
 }
 
-export async function getD1Event(slug: string): Promise<GiftEvent | undefined> {
+export async function getFirebaseEvent(slug: string): Promise<GiftEvent | undefined> {
   const snap = await adminDb().collection<GiftEvent>("events").doc(slug).get();
   return snap.data() ?? seedEvent(slug);
 }
 
-export async function listD1Events(limit = 25): Promise<GiftEvent[]> {
+export async function listFirebaseEvents(limit = 25): Promise<GiftEvent[]> {
   const snap = await adminDb().collection<GiftEvent>("events").orderBy("createdAt", "desc").limit(limit).get();
   const events = snap.docs.map((doc) => doc.data());
   const seed = seedEvent("tunde-and-zainab");
@@ -83,7 +83,7 @@ async function saveEvent(event: GiftEvent) {
 }
 
 async function requireEvent(slug: string): Promise<GiftEvent> {
-  const event = await getD1Event(slug);
+  const event = await getFirebaseEvent(slug);
   if (!event) throw new Error("Event not found");
   return event;
 }

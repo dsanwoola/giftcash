@@ -50,7 +50,7 @@ function mapProfile(profile: { id: string; email?: string; phone?: string; fullN
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Interim mode: Worker/D1 session API with localStorage fallback for offline/demo resilience.
+  // Firebase-first session API with localStorage fallback for offline/demo resilience.
   const mode: Mode = "demo";
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clearSessionCookie, sessionFromCookies } from "@/lib/data/d1-auth";
+import { clearSessionCookie, sessionFromCookies } from "@/lib/data/firebase-session";
 import { fail } from "@/lib/api/handle";
 
 export async function GET() {

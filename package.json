@@ -9,11 +9,7 @@
     "lint": "eslint",
     "firestore:bootstrap": "node scripts/bootstrap-firestore-schema.mjs",
     "payments:simulate": "node scripts/simulate-payments.mjs",
-    "payments:forward-agentmail": "node scripts/agentmail-bank-alert-forwarder.mjs",
-    "cf:build": "opennextjs-cloudflare build && node scripts/patch-opennext-cloudflare.mjs",
-    "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "payments:forward-agentmail": "node scripts/agentmail-bank-alert-forwarder.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -35,7 +31,6 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.20.1",
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
@@ -44,8 +39,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.107.0"
+    "typescript": "^5"
   },
   "engines": {
     "node": "22"

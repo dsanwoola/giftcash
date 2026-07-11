@@ -4,12 +4,7 @@ import { demoRepo } from "./demo-repo";
 import type { GiftRepo } from "./repo-types";
 
 /**
- * Occasion Cloudflare frontend currently uses the local demo repository.
- *
- * Firebase client imports are intentionally not loaded from the Cloudflare Worker
- * bundle because Firestore's protobuf runtime uses dynamic code generation, which
- * Cloudflare Workers disallow. Live persistence is being moved to the Worker/D1
- * API layer instead.
+ * Occasion.ng is Firebase-first. Client-side flows use the local demo repository for optimistic/offline UI; production writes and reads that require persistence go through Firebase-backed API routes.
  */
 export const repo: GiftRepo = demoRepo;
 

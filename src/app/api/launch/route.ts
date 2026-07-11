@@ -30,8 +30,8 @@ export async function GET() {
     },
     checklist: [
       { item: "Firebase App Hosting deployment", status: "done" },
-      { item: "Custom domain DNS", status: "pending_dns_propagation" },
-      { item: "Firestore server datastore", status: "configured_in_code" },
+      { item: "Custom domain DNS", status: "done" },
+      { item: "Firestore server datastore", status: "configured" },
       { item: "Firebase Auth authorized domains", status: "done" },
       { item: "Pricing and fee model", status: "done" },
       { item: "Paysure checkout credentials", status: paysureConfigured ? "done" : "blocked" },
