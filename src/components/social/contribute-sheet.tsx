@@ -253,8 +253,8 @@ export function ContributeSheet({
                     <div className="mt-1 flex justify-between font-semibold"><span>{onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
                   </div>
                   {error && <p className="text-sm text-pink">{error}</p>}
-                  <Button onClick={submit} size="lg" className="w-full">{onStartPaysureCheckout ? <><CreditCard className="h-4 w-4" /> Pay securely with Paysure</> : onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
-                  <p className="text-center text-xs text-muted">{onStartPaysureCheckout ? "You’ll be redirected to Paysure checkout for card, USSD or bank transfer." : onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
+                  <Button onClick={submit} size="lg" className="w-full">{onStartPaysureCheckout ? <><CreditCard className="h-4 w-4" /> Pay securely with Flutterwave</> : onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
+                  <p className="text-center text-xs text-muted">{onStartPaysureCheckout ? "You’ll be redirected to Flutterwave checkout for card, bank transfer, USSD or other available methods." : onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
                 </div>
               </>
             )}

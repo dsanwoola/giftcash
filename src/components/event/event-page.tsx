@@ -66,14 +66,14 @@ export function EventPage({ slug }: { slug: string }) {
     }
     window.dispatchEvent(new Event("giftcash:change"));
   };
-  const startPaysureCheckout = async (c: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
-    const res = await fetch(`/api/events/${slug}/payments/paysure/initialize`, {
+  const startFlutterwaveCheckout = async (c: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
+    const res = await fetch(`/api/events/${slug}/payments/flutterwave/initialize`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...c, table: table ?? undefined }),
     });
     const payload = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(payload.error ?? "Could not start Paysure checkout.");
+    if (!res.ok) throw new Error(payload.error ?? "Could not start Flutterwave checkout.");
     return payload as { authorizationUrl: string; reference: string };
   };
   const runAccessAction = async (path: string, body: Record<string, unknown>, success: string) => {
@@ -206,7 +206,7 @@ export function EventPage({ slug }: { slug: string }) {
         open={sheet}
         onClose={() => setSheet(false)}
         onContribute={contribute}
-        onStartPaysureCheckout={startPaysureCheckout}
+        onStartPaysureCheckout={startFlutterwaveCheckout}
         currency={event.currency}
         ctaLabel={`Gift ${event.celebrants}`}
         requireName={event.campaignMode}
