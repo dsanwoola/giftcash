@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { fail } from "@/lib/api/handle";
+import { publicOrigin } from "@/lib/api/origin";
 import { HttpError } from "@/lib/data/server-store";
 import { adminDb } from "@/lib/firebase/admin";
 import {
@@ -24,7 +25,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
     validateContributionForEvent(event, data);
 
     const reference = await createUniqueFlutterwaveReference();
-    const origin = new URL(req.url).origin;
+    const origin = publicOrigin(req);
     const baseIntent = buildFlutterwaveIntent(event, slug, reference, data);
     const authorizationUrl = await addFlutterwaveCheckoutUrl(baseIntent, { email: data.email, phone: data.phone, origin, eventTitle: event.title });
 

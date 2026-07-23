@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { publicOrigin } from "@/lib/api/origin";
 import { confirmFlutterwaveEventPayment } from "@/lib/payments/flutterwave-event-payments";
 
 export async function GET(req: Request, ctx: { params: Promise<{ slug: string }> }) {
@@ -7,7 +8,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ slug: string }>
   const reference = (url.searchParams.get("tx_ref") || url.searchParams.get("reference") || "").toUpperCase();
   const transactionId = url.searchParams.get("transaction_id") || undefined;
   const status = url.searchParams.get("status") || "";
-  const destination = new URL(`/event/${slug}`, url.origin);
+  const destination = new URL(`/event/${slug}`, publicOrigin(req));
 
   if (!reference) {
     destination.searchParams.set("payment", "missing-reference");
