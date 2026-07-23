@@ -229,41 +229,7 @@ export const firestoreRepo: GiftRepo = {
   },
 
   async createEvent(input: CreateEventInput) {
-    const event: GiftEvent = {
-      id: nanoid(),
-      slug: slugify(input.celebrants || input.title),
-      organizerId: uid(),
-      organizerName: input.organizerName,
-      type: input.type,
-      title: input.title,
-      celebrants: input.celebrants,
-      date: input.date,
-      startsAt: input.startsAt,
-      endsAt: input.endsAt,
-      story: input.story,
-      gradient: input.gradient,
-      currency: input.currency,
-      showTotal: input.showTotal,
-      goalAmount: input.goalAmount,
-      campaignMode: input.campaignMode,
-      maxContribution: input.maxContribution,
-      settlementAccount: input.settlementAccount,
-      payoutProvider: input.payoutProvider,
-      isPublic: input.isPublic,
-      ticketingEnabled: input.ticketingEnabled,
-      rsvpEnabled: input.rsvpEnabled,
-      seatingEnabled: input.seatingEnabled,
-      checkInEnabled: input.checkInEnabled,
-      ticketTypes: input.ticketTypes,
-      tables: input.tables,
-      guests: input.guests,
-      tickets: input.tickets,
-      contributions: [],
-      createdAt: new Date().toISOString(),
-    };
-    const cleanEvent = Object.fromEntries(Object.entries(event).filter(([, value]) => value !== undefined)) as GiftEvent;
-    await setDoc(doc(getDb(), COL.events, cleanEvent.slug), cleanEvent);
-    return cleanEvent;
+    return authedPost<GiftEvent>("/api/events", input);
   },
 
   async updateEventSettings(slug, settings) {

@@ -1,7 +1,7 @@
 import "server-only";
 import { nanoid } from "nanoid";
 import { adminDb } from "../firebase/admin";
-import { buildSeed, DEMO_USER_ID } from "./seed";
+import { buildSeed } from "./seed";
 import { calculatePlatformFee } from "../monetization";
 import type { EventGuest, EventTable, EventTicket, EventTicketType, GiftEvent, RsvpStatus } from "../types";
 import type { CreateEventInput } from "./repo-types";
@@ -17,7 +17,7 @@ function cleanText(value: string | undefined, fallback = "") {
   return (value ?? fallback).trim().replace(/\s+/g, " ");
 }
 
-function normalizeEvent(input: CreateEventInput): GiftEvent {
+function normalizeEvent(input: CreateEventInput, organizerId: string): GiftEvent {
   const celebrants = cleanText(input.celebrants);
   if (celebrants.length < 2) throw new Error("Celebrant name is required.");
   const title = cleanText(input.title, `${celebrants} Occasion`);
@@ -26,7 +26,7 @@ function normalizeEvent(input: CreateEventInput): GiftEvent {
   return {
     id: nanoid(),
     slug: slugify(title || celebrants),
-    organizerId: DEMO_USER_ID,
+    organizerId,
     organizerName: cleanText(input.organizerName, "Occasion host"),
     type: input.type,
     title,
@@ -58,8 +58,8 @@ function normalizeEvent(input: CreateEventInput): GiftEvent {
   };
 }
 
-export async function createFirebaseEvent(input: CreateEventInput): Promise<GiftEvent> {
-  const event = normalizeEvent(input);
+export async function createFirebaseEvent(input: CreateEventInput, organizerId: string): Promise<GiftEvent> {
+  const event = normalizeEvent(input, organizerId);
   await adminDb().collection<GiftEvent>("events").doc(event.slug).set(event);
   return event;
 }

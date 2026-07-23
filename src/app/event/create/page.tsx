@@ -9,6 +9,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { ShareHub } from "@/components/share/share-hub";
 import { CURRENCIES, toMinor } from "@/lib/money";
 import { REVENUE_PLANS, type RevenuePlanId } from "@/lib/monetization";
+import { repo } from "@/lib/data/repo";
 import type { CreateEventInput } from "@/lib/data/repo-types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { OCCASIONS, occasionById } from "@/lib/occasions";
@@ -150,14 +151,8 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
       organizerName,
     };
     try {
-      const res = await fetch("/api/events", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(payload.error ?? "Could not create event.");
-      onCreated(payload as GiftEvent);
+      const event = await repo.createEvent(input);
+      onCreated(event);
     } catch (apiError) {
       setError(apiError instanceof Error ? apiError.message : "Could not create event.");
     } finally {
