@@ -116,7 +116,7 @@ export function ContributeSheet({
       message: message.trim() || undefined,
       email: email.trim() || undefined,
       phone: phone.trim() || undefined,
-      contributorId: isAnon ? undefined : browserContributorId(),
+      contributorId: isAnon ? undefined : await browserContributorId(`${email.trim()}|${phone.replace(/\D/g, "")}`),
     };
     try {
       if (onStartPaysureCheckout) {
