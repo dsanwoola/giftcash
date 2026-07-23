@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import { adminAuth, adminDb } from "../firebase/admin";
 import { limitForKyc } from "../compliance/limits";
@@ -263,6 +264,11 @@ function contributionFromData(event: GiftEvent, data: ContributionData, meta: Ve
   if (event.settlementAccount) {
     c.settlementStatus = meta.settlementStatus ?? "pending";
     c.settlementAccountLast4 = event.settlementAccount.accountNumber.slice(-4);
+  }
+  if (!data.anonymous && data.contributorId && /^[a-zA-Z0-9_-]{16,128}$/.test(data.contributorId)) {
+    c.contributorKey = createHash("sha256")
+      .update(`occasion-event:${event.id}:${data.contributorId}`)
+      .digest("base64url");
   }
   if (data.message) c.message = data.message; // omit undefined (Firestore rejects)
   if (data.table) c.table = data.table;

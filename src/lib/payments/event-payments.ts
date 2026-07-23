@@ -40,12 +40,16 @@ export function validateContributionForEvent(event: GiftEvent, data: Contributio
 }
 
 export function cleanContribution(data: ContributionData): ContributionData {
+  const contributorId = data.contributorId?.trim();
   return {
     name: data.anonymous ? "Anonymous" : data.name?.trim() || "A guest",
     anonymous: !!data.anonymous,
     amount: data.amount,
     ...(data.message?.trim() ? { message: data.message.trim() } : {}),
     ...(data.table?.trim() ? { table: data.table.trim() } : {}),
+    ...(!data.anonymous && contributorId && /^[a-zA-Z0-9_-]{16,128}$/.test(contributorId)
+      ? { contributorId }
+      : {}),
   };
 }
 

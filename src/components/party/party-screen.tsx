@@ -9,25 +9,12 @@ import { repo } from "@/lib/data/repo";
 import { formatMoney, toMinor } from "@/lib/money";
 import { celebrate, fireworks } from "@/lib/confetti";
 import { SOUND_THEMES, playGiftSound, playWhoosh, unlockAudio, type SoundTheme } from "@/lib/sound";
+import { rankContributors, type ContributorRank } from "@/lib/contributions/leaderboard";
 import type { Contribution, CurrencyCode, GiftEvent } from "@/lib/types";
 
 const TEST_NAMES = ["Aunty Ngozi", "Chidi", "The Okafors", "Bisi & Tunde", "Uncle Sam", "Kemi", "Emeka", "Fatima", "Grandma Rose", "David O.", "The Adeyemis", "Zainab"];
 const TEST_AMOUNTS = [5000, 10000, 20000, 25000, 50000, 100000];
 const rand = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
-
-interface Ranked { name: string; amount: number; count: number; anonymous: boolean }
-
-function leaderboard(contribs: Contribution[]): Ranked[] {
-  const map = new Map<string, Ranked>();
-  for (const c of contribs) {
-    const key = c.anonymous ? `anon-${c.id}` : c.name;
-    const cur = map.get(key) ?? { name: c.name, amount: 0, count: 0, anonymous: c.anonymous };
-    cur.amount += c.amount;
-    cur.count += 1;
-    map.set(key, cur);
-  }
-  return [...map.values()].sort((a, b) => b.amount - a.amount);
-}
 
 interface TableRank { table: string; amount: number; count: number }
 function tableLeaderboard(contribs: Contribution[]): TableRank[] {
@@ -132,7 +119,7 @@ export function PartyScreen({ slug }: { slug: string }) {
 
   const showTotal = event.showTotal;
   const theme = event.soundTheme ?? "fanfare";
-  const ranks = leaderboard(event.contributions);
+  const ranks = rankContributors(event.contributions);
   const tableRanks = tableLeaderboard(event.contributions);
   const total = event.contributions.reduce((s, c) => s + c.amount, 0);
   const showTables = idleView === "tables" && tableRanks.length > 0;
@@ -309,7 +296,7 @@ function GiftExplosion({ gift, currency, showAmount, settlementBank }: { gift: C
 }
 
 /* ---------------- Leaderboard (idle) ---------------- */
-function Leaderboard({ ranks, currency, showAmount }: { ranks: Ranked[]; currency: CurrencyCode; showAmount: boolean }) {
+function Leaderboard({ ranks, currency, showAmount }: { ranks: ContributorRank[]; currency: CurrencyCode; showAmount: boolean }) {
   if (ranks.length === 0) {
     return (
       <div className="text-center">
@@ -324,7 +311,7 @@ function Leaderboard({ ranks, currency, showAmount }: { ranks: Ranked[]; currenc
   const list = (
     <ul className="space-y-3">
       {ranks.map((r, i) => (
-        <li key={`${r.name}-${i}`} className="flex items-center gap-4 rounded-2xl bg-white/5 px-5 py-3 backdrop-blur">
+        <li key={r.key} className="flex items-center gap-4 rounded-2xl bg-white/5 px-5 py-3 backdrop-blur">
           <span className="w-10 text-center text-2xl font-semibold">{medals[i] ?? i + 1}</span>
           <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-sm font-semibold">
             {r.anonymous ? "🎁" : r.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}

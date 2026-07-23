@@ -6,6 +6,7 @@ import { CheckCircle2, ClipboardCopy, Clock, CreditCard, Loader2, ShieldCheck } 
 import { Button } from "@/components/ui/button";
 import { CURRENCIES, formatMoney, serviceFee, toMinor } from "@/lib/money";
 import { burst } from "@/lib/confetti";
+import { browserContributorId } from "@/lib/contributions/browser-identity";
 import type { CurrencyCode } from "@/lib/types";
 
 const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 outline-none focus:border-brand";
@@ -18,6 +19,7 @@ export interface ContributionInput {
   message?: string;
   email?: string;
   phone?: string;
+  contributorId?: string;
 }
 
 export interface BankTransferIntentView {
@@ -107,7 +109,15 @@ export function ContributeSheet({
     if (maxAmount && amountMinor > maxAmount) return setError(`The maximum contribution is ${formatMoney(maxAmount, cur)}.`);
     setError("");
     setStep("paying");
-    const input = { name: name.trim(), anonymous: isAnon, amount: amountMinor, message: message.trim() || undefined, email: email.trim() || undefined, phone: phone.trim() || undefined };
+    const input = {
+      name: name.trim(),
+      anonymous: isAnon,
+      amount: amountMinor,
+      message: message.trim() || undefined,
+      email: email.trim() || undefined,
+      phone: phone.trim() || undefined,
+      contributorId: isAnon ? undefined : browserContributorId(),
+    };
     try {
       if (onStartPaysureCheckout) {
         const checkout = await onStartPaysureCheckout(input);

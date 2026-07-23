@@ -98,6 +98,8 @@ export interface ContributionData {
   amount: number; // minor units
   message?: string;
   table?: string;
+  /** Opaque per-browser id; converted server-side into an event-scoped hash. */
+  contributorId?: string;
 }
 
 export interface AdminStats {

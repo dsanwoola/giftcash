@@ -10,6 +10,7 @@ import {
   createGiftCashReference,
   type BankTransferPaymentIntent,
 } from "@/lib/payments/bank-transfer";
+import { cleanContribution } from "@/lib/payments/event-payments";
 
 const MIN_AMOUNT = 100_00; // ₦100
 
@@ -30,13 +31,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
     const fee = serviceFee(data.amount);
     const now = new Date();
     const reference = await uniqueReference(db);
-    const contribution: ContributionData = {
-      name: data.anonymous ? "Anonymous" : data.name?.trim() || "A guest",
-      anonymous: !!data.anonymous,
-      amount: data.amount,
-      ...(data.message ? { message: data.message.trim() } : {}),
-      ...(data.table ? { table: data.table } : {}),
-    };
+    const contribution = cleanContribution(data);
     const intent: BankTransferPaymentIntent = {
       id: reference,
       reference,

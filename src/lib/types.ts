@@ -231,6 +231,8 @@ export interface Contribution {
   id: string;
   name: string; // display name, or "Anonymous"
   anonymous: boolean;
+  /** Event-scoped opaque identity used for aggregation; never an email/phone. */
+  contributorKey?: string;
   amount: number; // minor units
   platformFee?: number; // Occasion revenue share in minor units
   netAmount?: number; // amount due to organizer/recipient after platform fee
