@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
+import { LogOut, Loader2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -93,9 +93,6 @@ export default function SettingsPage() {
 
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" onClick={signOut}><LogOut className="h-4 w-4" /> Sign out</Button>
-            {mode === "demo" && (
-              <Button variant="ghost" onClick={() => repo.reset()}><RotateCcw className="h-4 w-4" /> Reset demo data</Button>
-            )}
           </div>
         </div>
       )}

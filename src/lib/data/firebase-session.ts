@@ -27,19 +27,20 @@ function userIdFor(email?: string, phone?: string) {
   return `occ-${raw.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || nanoid(8)}`;
 }
 
-export async function createSession(input: { name?: string; email?: string; phone?: string }): Promise<{ user: UserProfile; session: OccasionSession }> {
-  const id = userIdFor(input.email, input.phone);
+export async function createSession(input: { uid?: string; name?: string; email?: string; phone?: string }): Promise<{ user: UserProfile; session: OccasionSession }> {
+  const id = input.uid || userIdFor(input.email, input.phone);
   const existing = await adminDb().collection<UserProfile>("profiles").doc(id).get();
-  const user: UserProfile = existing.data() ?? {
+  const existingData = existing.data();
+  const user: UserProfile = {
     id,
-    fullName: input.name?.trim() || input.email?.split("@")[0] || input.phone || "Occasion User",
-    email: input.email || undefined,
-    phone: input.phone || undefined,
-    country: "NG",
-    currency: "NGN",
-    kycStatus: "none",
-    role: "user",
-    createdAt: nowIso(),
+    fullName: existingData?.fullName || input.name?.trim() || input.email?.split("@")[0] || input.phone || "Occasion User",
+    email: input.email || existingData?.email || undefined,
+    phone: input.phone || existingData?.phone || undefined,
+    country: existingData?.country || "NG",
+    currency: existingData?.currency || "NGN",
+    kycStatus: existingData?.kycStatus || "none",
+    role: existingData?.role || "user",
+    createdAt: existingData?.createdAt || nowIso(),
   };
   await adminDb().collection<UserProfile>("profiles").doc(id).set(user, { merge: true });
   const session: OccasionSession = {

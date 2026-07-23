@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Wallet, Banknote, Plus, Inbox, ShieldCheck, Settings, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -19,14 +20,22 @@ const nav = [
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { user, signOutUser } = useAuth();
+  const { user, loading, signOutUser } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    if (!loading && !user) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [loading, pathname, router, user]);
   const signOut = async () => {
     await signOutUser();
     router.push("/");
   };
   const displayName = user?.displayName ?? user?.email ?? "Guest";
   const initials = displayName.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
+  if (loading || !user) {
+    return <div className="grid min-h-dvh place-items-center bg-cream text-sm text-muted">Loading your account…</div>;
+  }
+
   return (
     <div className="min-h-dvh bg-cream md:flex">
       {/* Sidebar (desktop) */}
