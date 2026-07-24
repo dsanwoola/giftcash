@@ -92,7 +92,7 @@ export function EventPage({ slug }: { slug: string }) {
         <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>
       </div>
 
-      <ContributeSheet open={sheet} onClose={() => setSheet(false)} onContribute={contribute} onStartPaysureCheckout={startFlutterwaveCheckout} currency={party.currency} ctaLabel={`Gift ${party.celebrants}`} requireName={party.campaignMode} maxAmount={party.maxContribution} />
+      <ContributeSheet open={sheet} onClose={() => setSheet(false)} onContribute={contribute} onStartCheckout={startFlutterwaveCheckout} currency={party.currency} ctaLabel={`Gift ${party.celebrants}`} requireName={party.campaignMode} maxAmount={party.maxContribution} />
       <SetupGuide open={setupOpen} onClose={() => setSetupOpen(false)} liveUrl={typeof window !== "undefined" ? `${window.location.origin}/party/${slug}/live` : `/party/${slug}/live`} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} url={url} title={party.title} heading={`Share ${party.celebrants}’s Gift Party`} defaultMessage={shareMessage} qrLabel="Scan to send a GiftCash" calendar={{ title: party.title, details: `Celebrate ${party.celebrants} with a cash gift: ${url}`, start: party.date }} />
     </div>

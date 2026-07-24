@@ -43,7 +43,7 @@ export function ContributeSheet({
   onClose,
   onContribute,
   onStartBankTransfer,
-  onStartPaysureCheckout,
+  onStartCheckout,
   pollBankTransfer,
   currency,
   ctaLabel = "Contribute",
@@ -54,7 +54,7 @@ export function ContributeSheet({
   onClose: () => void;
   onContribute: (c: ContributionInput) => Promise<void>;
   onStartBankTransfer?: (c: ContributionInput) => Promise<BankTransferIntentView>;
-  onStartPaysureCheckout?: (c: ContributionInput) => Promise<{ authorizationUrl: string; reference: string }>;
+  onStartCheckout?: (c: ContributionInput) => Promise<{ authorizationUrl: string; reference: string }>;
   pollBankTransfer?: (reference: string) => Promise<Pick<BankTransferIntentView, "status"> & { reviewReason?: string }>;
   currency: CurrencyCode;
   ctaLabel?: string;
@@ -101,11 +101,11 @@ export function ContributeSheet({
   }, [step, intent, pollBankTransfer]);
 
   const submit = async () => {
-    if (requireName && !name.trim()) return setError("Your name is required for this event.");
+    if (requireName && !name.trim()) return setError("Your name is required for this Gift Party.");
     if (!isAnon && !name.trim()) return setError("Add your name (or contribute anonymously).");
     if (amountMinor < toMinor(100)) return setError("Enter a valid amount.");
-    if (onStartPaysureCheckout && !email.trim()) return setError("Add your email for the payment receipt.");
-    if (onStartPaysureCheckout && !phone.replace(/\D/g, "")) return setError("Add your phone number for checkout.");
+    if (onStartCheckout && !email.trim()) return setError("Add your email for the payment receipt.");
+    if (onStartCheckout && !phone.replace(/\D/g, "")) return setError("Add your phone number for checkout.");
     if (maxAmount && amountMinor > maxAmount) return setError(`The maximum contribution is ${formatMoney(maxAmount, cur)}.`);
     setError("");
     setStep("paying");
@@ -119,8 +119,8 @@ export function ContributeSheet({
       contributorId: isAnon ? undefined : await browserContributorId(`${email.trim()}|${phone.replace(/\D/g, "")}`),
     };
     try {
-      if (onStartPaysureCheckout) {
-        const checkout = await onStartPaysureCheckout(input);
+      if (onStartCheckout) {
+        const checkout = await onStartCheckout(input);
         window.location.assign(checkout.authorizationUrl);
         return;
       }
@@ -181,7 +181,7 @@ export function ContributeSheet({
               <div className="py-6 text-center">
                 <CheckCircle2 className="mx-auto h-14 w-14 text-emerald" />
                 <h3 className="mt-3 font-display text-xl font-semibold">Gift confirmed 🎉</h3>
-                <p className="mt-1 text-muted">Your {formatMoney(amountMinor, cur)} contribution has been added to the event.</p>
+                <p className="mt-1 text-muted">Your {formatMoney(amountMinor, cur)} contribution has been added to the Gift Party.</p>
                 {intent?.reference && <p className="mt-2 text-xs text-muted">Reference: {intent.reference}</p>}
                 <Button onClick={close} size="lg" className="mt-5 w-full">Done</Button>
               </div>
@@ -189,7 +189,7 @@ export function ContributeSheet({
               <div className="py-6 text-center">
                 <ShieldCheck className="mx-auto h-14 w-14 text-gold" />
                 <h3 className="mt-3 font-display text-xl font-semibold">Payment sent for review</h3>
-                <p className="mt-1 text-sm text-muted">We found a bank alert, but it needs admin confirmation before it appears on the event screen.</p>
+                <p className="mt-1 text-sm text-muted">We found a bank alert, but it needs admin confirmation before it appears in Party Mode.</p>
                 {reviewReason && <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-muted">{reviewReason}</p>}
                 <Button onClick={close} size="lg" className="mt-5 w-full">Done</Button>
               </div>
@@ -240,9 +240,9 @@ export function ContributeSheet({
                       </button>
                     ))}
                   </div>
-                  {maxAmount && <p className="-mt-1 text-xs text-muted">Maximum {formatMoney(maxAmount, cur)} per donor for this event.</p>}
+                  {maxAmount && <p className="-mt-1 text-xs text-muted">Maximum {formatMoney(maxAmount, cur)} per gifter for this Gift Party.</p>}
                   <input className={inputCls} placeholder={requireName ? "Your full name (required)" : "Your name"} value={name} onChange={(e) => setName(e.target.value)} disabled={isAnon} />
-                  {onStartPaysureCheckout && (
+                  {onStartCheckout && (
                     <div className="grid gap-2 sm:grid-cols-2">
                       <input className={inputCls} type="email" placeholder="Email for receipt" value={email} onChange={(e) => setEmail(e.target.value)} />
                       <input className={inputCls} inputMode="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -263,8 +263,8 @@ export function ContributeSheet({
                     <div className="mt-1 flex justify-between font-semibold"><span>{onStartBankTransfer ? "Total transfer" : "Total"}</span><span>{formatMoney(amountMinor + fee, cur)}</span></div>
                   </div>
                   {error && <p className="text-sm text-pink">{error}</p>}
-                  <Button onClick={submit} size="lg" className="w-full">{onStartPaysureCheckout ? <><CreditCard className="h-4 w-4" /> Pay securely with Flutterwave</> : onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
-                  <p className="text-center text-xs text-muted">{onStartPaysureCheckout ? "You’ll be redirected to Flutterwave checkout for card, bank transfer, USSD or other available methods." : onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
+                  <Button onClick={submit} size="lg" className="w-full">{onStartCheckout ? <><CreditCard className="h-4 w-4" /> Pay securely with Flutterwave</> : onStartBankTransfer ? "Submit amount and show transfer details" : `Pay ${formatMoney(amountMinor + fee, cur)}`}</Button>
+                  <p className="text-center text-xs text-muted">{onStartCheckout ? "You’ll be redirected to Flutterwave checkout for card, bank transfer, USSD or other available methods." : onStartBankTransfer ? "After you submit, GiftCash will show the GTBank account and your unique red payment reference." : "Demo payment — no real charge."}</p>
                 </div>
               </>
             )}
