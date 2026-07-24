@@ -1,6 +1,6 @@
-import { EventPage } from "@/components/event/event-page";
+import { redirect } from "next/navigation";
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return <EventPage slug={slug} />;
+  redirect(`/party/${slug}`);
 }

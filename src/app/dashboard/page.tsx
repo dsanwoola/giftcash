@@ -63,10 +63,10 @@ export default function DashboardHome() {
           <p className="mt-2 font-medium">Start a group gift</p>
           <p className="text-xs text-muted">{groups?.length ? `${groups.length} active` : "Pool money toward one big gift"}</p>
         </Link>
-        <Link href="/event/create" className="rounded-3xl border border-ink/5 bg-white/70 p-5 transition hover:shadow-soft">
-          <p className="text-2xl">💍</p>
-          <p className="mt-2 font-medium">Create event page</p>
-          <p className="text-xs text-muted">{events?.length ? `${events.length} active` : "Wedding & ceremony QR pages"}</p>
+        <Link href="/party/create" className="rounded-3xl border border-ink/5 bg-white/70 p-5 transition hover:shadow-soft">
+          <p className="text-2xl">🎉</p>
+          <p className="mt-2 font-medium">Create a Gift Party</p>
+          <p className="text-xs text-muted">{events?.length ? `${events.length} active` : "QR gifting pages with live Party Mode"}</p>
         </Link>
       </div>
       {(groups?.length || events?.length) ? (
@@ -79,11 +79,11 @@ export default function DashboardHome() {
           ))}
           {events?.map((e) => (
             <div key={e.id} className="rounded-2xl border border-ink/5 bg-white/60 px-4 py-3 text-sm transition hover:shadow-soft">
-              <Link href={`/event/${e.slug}`} className="flex items-center justify-between gap-3">
-                <span className="truncate">💍 {e.title}</span>
+              <Link href={`/party/${e.slug}`} className="flex items-center justify-between gap-3">
+                <span className="truncate">🎉 {e.title}</span>
                 <span className="shrink-0 text-muted">{e.contributions.length} gifts</span>
               </Link>
-              <Link href={`/event/${e.slug}/report`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
+              <Link href={`/party/${e.slug}/report`} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
                 <FileSpreadsheet className="h-3.5 w-3.5" /> Gifters report
               </Link>
             </div>

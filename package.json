@@ -10,7 +10,8 @@
     "firestore:bootstrap": "node scripts/bootstrap-firestore-schema.mjs",
     "payments:simulate": "node scripts/simulate-payments.mjs",
     "payments:forward-agentmail": "node scripts/agentmail-bank-alert-forwarder.mjs",
-    "test:leaderboard": "node --experimental-strip-types --test tests/contributor-leaderboard.test.ts"
+    "test:leaderboard": "node --experimental-strip-types --test tests/contributor-leaderboard.test.ts",
+    "test:product-separation": "node --experimental-strip-types --test tests/product-separation.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

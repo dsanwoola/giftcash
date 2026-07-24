@@ -83,7 +83,7 @@ export async function initializeFlutterwavePayment(input: FlutterwaveInitializeI
       customer: input.customer,
       meta: input.meta,
       customizations: {
-        title: "Occasion.ng GiftCash",
+        title: "GiftCash",
         description: "Cash gift contribution",
         ...(input.customizations ?? {}),
       },

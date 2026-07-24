@@ -68,9 +68,9 @@ export function buildFlutterwaveIntent(event: GiftEvent, slug: string, reference
 
 export async function addFlutterwaveCheckoutUrl(intent: FlutterwaveEventPaymentIntent, input: { email?: string; phone?: string; origin: string; eventTitle?: string }) {
   const safeReference = intent.reference.toUpperCase();
-  const email = input.email?.trim() || `guest-${safeReference.toLowerCase()}@occasion.ng`;
+  const email = input.email?.trim() || `guest-${safeReference.toLowerCase()}@giftcash.ng`;
   const phone = input.phone?.replace(/\D/g, "") || undefined;
-  const name = intent.contribution.anonymous ? "Anonymous Guest" : intent.contribution.name || "Occasion Guest";
+  const name = intent.contribution.anonymous ? "Anonymous Gifter" : intent.contribution.name || "GiftCash Guest";
   const result = await initializeFlutterwavePayment({
     txRef: safeReference,
     amount: intent.totalChargeAmount,
@@ -84,10 +84,9 @@ export async function addFlutterwaveCheckoutUrl(intent: FlutterwaveEventPaymentI
       contributionAmount: intent.expectedAmount,
       serviceFee: intent.serviceFee,
       donorName: intent.contribution.anonymous ? "Anonymous" : intent.contribution.name,
-      table: intent.contribution.table,
     },
     customizations: {
-      title: "Occasion.ng GiftCash",
+      title: "GiftCash",
       description: input.eventTitle ? `Gift contribution for ${input.eventTitle}` : "Cash gift contribution",
     },
   });

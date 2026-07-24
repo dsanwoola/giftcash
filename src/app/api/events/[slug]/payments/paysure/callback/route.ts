@@ -5,7 +5,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ slug: string }>
   const { slug } = await ctx.params;
   const url = new URL(req.url);
   const reference = (url.searchParams.get("reference") || url.searchParams.get("ref") || url.searchParams.get("trxref") || "").toUpperCase();
-  const destination = new URL(`/event/${slug}`, url.origin);
+  const destination = new URL(`/party/${slug}`, url.origin);
 
   if (!reference) {
     destination.searchParams.set("payment", "missing-reference");

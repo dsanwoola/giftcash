@@ -6,11 +6,11 @@ export async function GET() {
   const paystackConfigured = Boolean(process.env.PAYSTACK_SECRET_KEY?.trim());
   const paysureConfigured = isPaysureConfigured();
   const agentMailConfigured = Boolean(process.env.AGENTMAIL_API_KEY?.trim());
-  const publicBaseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://occasion.ng";
+  const publicBaseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || "https://giftcash.ng";
 
   return NextResponse.json({
     launch: {
-      app: "Occasion.ng",
+      app: "GiftCash",
       status: paysureConfigured || paystackConfigured ? "ready_for_paid_pilot" : "ready_for_free_launch_payment_setup_required",
       publicBaseUrl,
     },
@@ -23,9 +23,9 @@ export async function GET() {
       agentMailConfigured,
       livePaymentsEnabled: paysureConfigured || paystackConfigured,
       notes: paysureConfigured
-        ? ["Paysure checkout is configured. Verify callback and webhook in Paysure before announcing live paid events."]
+        ? ["Paysure checkout is configured. Verify callback and webhook in Paysure before announcing live GiftCash payments."]
         : paystackConfigured
-          ? ["Paystack secret is configured. Verify callback and webhook in Paystack before announcing live paid events."]
+          ? ["Paystack secret is configured. Verify callback and webhook in Paystack before announcing live GiftCash payments."]
           : ["No checkout provider secret is configured, so paid checkout is blocked until provider credentials are added."],
     },
     checklist: [

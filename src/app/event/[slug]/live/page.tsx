@@ -1,6 +1,6 @@
-import { PartyScreen } from "@/components/party/party-screen";
+import { redirect } from "next/navigation";
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return <PartyScreen slug={slug} />;
+  redirect(`/party/${slug}/live`);
 }

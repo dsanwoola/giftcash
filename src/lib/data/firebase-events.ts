@@ -20,14 +20,14 @@ function cleanText(value: string | undefined, fallback = "") {
 function normalizeEvent(input: CreateEventInput, organizerId: string): GiftEvent {
   const celebrants = cleanText(input.celebrants);
   if (celebrants.length < 2) throw new Error("Celebrant name is required.");
-  const title = cleanText(input.title, `${celebrants} Occasion`);
+  const title = cleanText(input.title, `${celebrants} Gift Party`);
   const date = new Date(input.date);
   if (Number.isNaN(date.getTime())) throw new Error("Valid event date is required.");
   return {
     id: nanoid(),
     slug: slugify(title || celebrants),
     organizerId,
-    organizerName: cleanText(input.organizerName, "Occasion host"),
+    organizerName: cleanText(input.organizerName, "GiftCash host"),
     type: input.type,
     title,
     celebrants,

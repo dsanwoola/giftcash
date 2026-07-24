@@ -33,7 +33,7 @@ export async function createSession(input: { uid?: string; name?: string; email?
   const existingData = existing.data();
   const user: UserProfile = {
     id,
-    fullName: existingData?.fullName || input.name?.trim() || input.email?.split("@")[0] || input.phone || "Occasion User",
+    fullName: existingData?.fullName || input.name?.trim() || input.email?.split("@")[0] || input.phone || "GiftCash User",
     email: input.email || existingData?.email || undefined,
     phone: input.phone || existingData?.phone || undefined,
     country: existingData?.country || "NG",

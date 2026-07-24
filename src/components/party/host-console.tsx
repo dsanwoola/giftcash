@@ -29,7 +29,7 @@ export function HostConsole({ slug }: { slug: string }) {
 
   if (event === undefined || authLoading) return <div className="grid min-h-dvh place-items-center bg-cream"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>;
   if (event === null) {
-    return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Event not found</h1><Link href="/" className="mt-4 inline-block text-brand underline">Go home</Link></div></div>;
+    return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Gift Party not found</h1><Link href="/" className="mt-4 inline-block text-brand underline">Go home</Link></div></div>;
   }
 
   // Organizer-only: the console can change live settings, so it must be the host.
@@ -37,12 +37,12 @@ export function HostConsole({ slug }: { slug: string }) {
     return (
       <AuthShell
         title="Host sign-in required"
-        subtitle="The host console controls your live event — please sign in as the organizer."
-        footer={<>Not the host? <Link href={`/event/${slug}`} className="font-medium text-brand">View the event page</Link></>}
+        subtitle="The host console controls your live Gift Party—please sign in as the organizer."
+        footer={<>Not the host? <Link href={`/party/${slug}`} className="font-medium text-brand">View the Gift Party</Link></>}
       >
         <div className="space-y-3 text-center">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-brand-soft text-brand"><Lock className="h-6 w-6" /></span>
-          <ButtonLink href={`/login?next=/event/${slug}/host`} size="lg" className="w-full">Sign in to continue</ButtonLink>
+          <ButtonLink href={`/login?next=/party/${slug}/host`} size="lg" className="w-full">Sign in to continue</ButtonLink>
         </div>
       </AuthShell>
     );
@@ -53,8 +53,8 @@ export function HostConsole({ slug }: { slug: string }) {
         <div>
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-pink/10 text-pink"><Lock className="h-6 w-6" /></span>
           <h1 className="mt-4 font-display text-2xl font-semibold">You&apos;re not the host</h1>
-          <p className="mt-1 text-muted">Only {event.organizerName} can control this event.</p>
-          <ButtonLink href={`/event/${slug}`} variant="outline" className="mt-5">View the event page</ButtonLink>
+          <p className="mt-1 text-muted">Only {event.organizerName} can control this Gift Party.</p>
+          <ButtonLink href={`/party/${slug}`} variant="outline" className="mt-5">View the Gift Party</ButtonLink>
         </div>
       </div>
     );
@@ -62,7 +62,7 @@ export function HostConsole({ slug }: { slug: string }) {
 
   const total = event.contributions.reduce((s, c) => s + c.amount, 0);
   const theme = event.soundTheme ?? "fanfare";
-  const liveUrl = typeof window !== "undefined" ? `${window.location.origin}/event/${slug}/live` : "";
+  const liveUrl = typeof window !== "undefined" ? `${window.location.origin}/party/${slug}/live` : "";
 
   const set = (s: Parameters<typeof repo.updateEventSettings>[1]) => repo.updateEventSettings(slug, s);
 
@@ -79,13 +79,13 @@ export function HostConsole({ slug }: { slug: string }) {
 
   const simulate = () => repo.contributeToEvent(slug, {
     name: rand(TEST_NAMES), anonymous: false, amount: toMinor(rand(TEST_AMOUNTS)),
-    table: String(1 + Math.floor(Math.random() * 12)),
+
   });
 
   return (
     <div className="min-h-dvh bg-cream">
       <div className="mx-auto max-w-md px-5 py-6">
-        <div className="flex items-center justify-between"><Logo /><Link href={`/event/${slug}`} className="text-sm text-muted hover:text-ink">Event page</Link></div>
+        <div className="flex items-center justify-between"><Logo /><Link href={`/party/${slug}`} className="text-sm text-muted hover:text-ink">Gift Party</Link></div>
 
         <div className="mt-6">
           <p className="text-xs uppercase tracking-[0.2em] text-brand">Host console</p>
@@ -159,7 +159,7 @@ export function HostConsole({ slug }: { slug: string }) {
 
         {/* Screen links */}
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <ButtonLink href={`/event/${slug}/live`} variant="dark" className="w-full"><MonitorPlay className="h-4 w-4" /> Open big screen</ButtonLink>
+          <ButtonLink href={`/party/${slug}/live`} variant="dark" className="w-full"><MonitorPlay className="h-4 w-4" /> Open big screen</ButtonLink>
           <button onClick={() => setSetupOpen(true)} className="rounded-full border border-ink/15 bg-white/70 px-4 py-2.5 text-sm hover:border-brand/40"><HelpCircle className="mr-1 inline h-4 w-4" /> Setup help</button>
         </div>
       </div>

@@ -9,10 +9,11 @@ export function SiteHeader() {
         <Logo />
         <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
           <Link href="/#how" className="hover:text-ink">How it works</Link>
-          <Link href="/#occasions" className="hover:text-ink">Occasions</Link>
+          <Link href="/gift/create" className="hover:text-ink">Send a gift</Link>
+          <Link href="/party/create" className="hover:text-ink">Gift Party</Link>
           <Link href="/#features" className="hover:text-ink">Features</Link>
           <Link href="/pricing" className="hover:text-ink">Pricing</Link>
-          <Link href="/launch" className="hover:text-ink">Launch</Link>
+
           <Link href="/dashboard" className="hover:text-ink">Dashboard</Link>
         </nav>
         <HeaderAuth />

@@ -15,9 +15,18 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Occasion.ng — Invites, tickets, tables, gifts, and check-in",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://giftcash.ng"),
+  title: "GiftCash — Send cash. Share joy. Celebrate together.",
   description:
-    "Occasion.ng helps you create event pages, sell tickets, manage RSVP, arrange tables, collect GiftCash gifts, and check guests in from one link.",
+    "Send personal cash gifts, create group gifts and celebrate contributions live with GiftCash Party Mode.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "GiftCash — Cash gifting made memorable",
+    description: "Personal gifts, group gifting and live Gift Party celebrations in one secure experience.",
+    url: "https://giftcash.ng",
+    siteName: "GiftCash",
+    type: "website",
+  },
 };
 
 export const viewport: Viewport = {

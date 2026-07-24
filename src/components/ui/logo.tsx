@@ -9,9 +9,7 @@ export function Logo({ className, href = "/" }: { className?: string; href?: str
           ✨
         </span>
       </span>
-      <span>
-        Occasion<span className="text-brand">.ng</span>
-      </span>
+      <span>Gift<span className="text-brand">Cash</span></span>
     </Link>
   );
 }

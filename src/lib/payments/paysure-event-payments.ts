@@ -62,9 +62,9 @@ export function buildPaysureIntent(event: GiftEvent, slug: string, reference: st
 
 export function addPaysureCheckoutUrl(intent: PaysureEventPaymentIntent, input: { email?: string; phone?: string; origin: string }) {
   const safeReference = intent.reference.toUpperCase();
-  const email = input.email?.trim() || `guest-${safeReference.toLowerCase()}@occasion.ng`;
+  const email = input.email?.trim() || `guest-${safeReference.toLowerCase()}@giftcash.ng`;
   const phone = input.phone?.replace(/\D/g, "") || "08000000000";
-  const name = intent.contribution.anonymous ? "Anonymous Guest" : intent.contribution.name || "Occasion Guest";
+  const name = intent.contribution.anonymous ? "Anonymous Gifter" : intent.contribution.name || "GiftCash Guest";
   return buildPaysureCheckoutUrl({
     reference: safeReference,
     amount: intent.totalChargeAmount,
@@ -72,7 +72,7 @@ export function addPaysureCheckoutUrl(intent: PaysureEventPaymentIntent, input: 
     name,
     phone,
     callbackUrl: `${input.origin}/api/events/${intent.eventSlug}/payments/paysure/callback?reference=${safeReference}`,
-    cancelUrl: `${input.origin}/event/${intent.eventSlug}?payment=cancelled&reference=${safeReference}`,
+    cancelUrl: `${input.origin}/party/${intent.eventSlug}?payment=cancelled&reference=${safeReference}`,
   });
 }
 

@@ -16,42 +16,19 @@ const TEST_NAMES = ["Aunty Ngozi", "Chidi", "The Okafors", "Bisi & Tunde", "Uncl
 const TEST_AMOUNTS = [5000, 10000, 20000, 25000, 50000, 100000];
 const rand = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
-interface TableRank { table: string; amount: number; count: number }
-function tableLeaderboard(contribs: Contribution[]): TableRank[] {
-  const map = new Map<string, TableRank>();
-  for (const c of contribs) {
-    if (!c.table) continue;
-    const cur = map.get(c.table) ?? { table: c.table, amount: 0, count: 0 };
-    cur.amount += c.amount;
-    cur.count += 1;
-    map.set(c.table, cur);
-  }
-  return [...map.values()].sort((a, b) => b.amount - a.amount);
-}
-
 export function PartyScreen({ slug }: { slug: string }) {
   const [event, setEvent] = useState<GiftEvent | null | undefined>(undefined);
   const [started, setStarted] = useState(false);
   const [celebration, setCelebration] = useState<Contribution | null>(null);
   const [queue, setQueue] = useState<Contribution[]>([]);
-  const [idleView, setIdleView] = useState<"gifters" | "tables">("gifters");
+
 
   const seen = useRef<Set<string>>(new Set());
   const initialized = useRef(false);
   // Display settings live on the event doc so a phone host console can drive them.
   const themeRef = useRef<SoundTheme>("fanfare");
   useEffect(() => { if (event) themeRef.current = event.soundTheme ?? "fanfare"; }, [event]);
-  const eventRef = useRef(event);
-  useEffect(() => { eventRef.current = event; }, [event]);
 
-  // When idle, alternate between the gifters board and the tables board.
-  useEffect(() => {
-    const id = setInterval(() => {
-      const hasTables = (eventRef.current?.contributions ?? []).some((c) => c.table);
-      setIdleView((v) => (v === "gifters" && hasTables ? "tables" : "gifters"));
-    }, 12000);
-    return () => clearInterval(id);
-  }, []);
 
   // Live subscription (Firestore onSnapshot live; cross-tab in demo).
   useEffect(() => repo.subscribeEvent(slug, setEvent), [slug]);
@@ -101,7 +78,7 @@ export function PartyScreen({ slug }: { slug: string }) {
       name: rand(TEST_NAMES),
       anonymous: Math.random() < 0.12,
       amount: toMinor(rand(TEST_AMOUNTS)),
-      table: String(1 + Math.floor(Math.random() * 12)),
+
       message: Math.random() < 0.4 ? rand(["Congratulations! 🎉", "So happy for you ❤️", "God bless you both 🙏", "Enjoy! 🥳"]) : undefined,
     });
   }, [slug]);
@@ -112,7 +89,7 @@ export function PartyScreen({ slug }: { slug: string }) {
   if (event === null) {
     return (
       <div className="grid min-h-dvh place-items-center bg-ink px-6 text-center text-cream">
-        <div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Event not found</h1><Link href="/" className="mt-4 inline-block text-gold underline">Go home</Link></div>
+        <div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Gift Party not found</h1><Link href="/" className="mt-4 inline-block text-gold underline">Go home</Link></div>
       </div>
     );
   }
@@ -120,10 +97,8 @@ export function PartyScreen({ slug }: { slug: string }) {
   const showTotal = event.showTotal;
   const theme = event.soundTheme ?? "fanfare";
   const ranks = rankContributors(event.contributions);
-  const tableRanks = tableLeaderboard(event.contributions);
   const total = event.contributions.reduce((s, c) => s + c.amount, 0);
-  const showTables = idleView === "tables" && tableRanks.length > 0;
-  const url = typeof window !== "undefined" ? `${window.location.origin}/event/${event.slug}` : "";
+  const url = typeof window !== "undefined" ? `${window.location.origin}/party/${event.slug}` : "";
   const bg = `radial-gradient(80% 60% at 50% 0%, ${event.gradient[0]} 0%, #0c0712 60%), #0c0712`;
 
   return (
@@ -163,8 +138,6 @@ export function PartyScreen({ slug }: { slug: string }) {
       <main className="relative z-10 grid min-h-[calc(100dvh-200px)] place-items-center px-6">
         {celebration ? (
           <GiftExplosion gift={celebration} currency={event.currency} showAmount={showTotal} settlementBank={event.settlementAccount?.bankName} />
-        ) : showTables ? (
-          <TablesLeaderboard ranks={tableRanks} currency={event.currency} showAmount={showTotal} />
         ) : (
           <Leaderboard ranks={ranks} currency={event.currency} showAmount={showTotal} />
         )}
@@ -261,7 +234,7 @@ function GiftExplosion({ gift, currency, showAmount, settlementBank }: { gift: C
         initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.15 }}
         className="mt-8 text-sm uppercase tracking-[0.3em] text-cream/60"
       >
-        New gift{gift.table ? ` · Table ${gift.table}` : ""}
+        New GiftCash
       </motion.p>
       <motion.h2
         initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}
@@ -374,32 +347,5 @@ function GoalBar({ raised, goal, currency, showAmount }: { raised: number; goal:
         />
       </div>
     </div>
-  );
-}
-
-/* ---------------- Tables leaderboard (idle) ---------------- */
-function TablesLeaderboard({ ranks, currency, showAmount }: { ranks: TableRank[]; currency: CurrencyCode; showAmount: boolean }) {
-  const medals = ["🥇", "🥈", "🥉"];
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-2xl">
-      <div className="mb-6 flex items-center justify-center gap-2 text-cream/60">
-        <span className="text-2xl">🏟️</span>
-        <h2 className="font-display text-2xl font-semibold">Top Tables</h2>
-      </div>
-      <ul className="space-y-3">
-        {ranks.slice(0, 8).map((r, i) => (
-          <li key={r.table} className="flex items-center gap-4 rounded-2xl bg-white/5 px-5 py-3 backdrop-blur">
-            <span className="w-10 text-center text-2xl font-semibold">{medals[i] ?? i + 1}</span>
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-white/10 text-sm font-semibold">T{r.table}</span>
-            <span className="flex-1 text-xl font-medium">Table {r.table}</span>
-            {showAmount ? (
-              <span className="gold-foil font-display text-xl font-semibold">{formatMoney(r.amount, currency)}</span>
-            ) : (
-              <span className="text-sm text-cream/50">{r.count} gift{r.count > 1 ? "s" : ""}</span>
-            )}
-          </li>
-        ))}
-      </ul>
-    </motion.div>
   );
 }

@@ -91,8 +91,8 @@ export function EventReportPage({ slug }: { slug: string }) {
   return (
     <div className="min-h-dvh bg-cream px-4 py-5 sm:px-5 sm:py-8">
       <main className="mx-auto max-w-4xl">
-        <Link href={`/event/${event.slug}`} className="inline-flex items-center gap-2 text-sm text-muted hover:text-ink">
-          <ArrowLeft className="h-4 w-4" /> Back to event
+        <Link href={`/party/${event.slug}`} className="inline-flex items-center gap-2 text-sm text-muted hover:text-ink">
+          <ArrowLeft className="h-4 w-4" /> Back to Gift Party
         </Link>
 
         <section className="mt-5 overflow-hidden rounded-[2rem] bg-white shadow-lift">
@@ -105,7 +105,7 @@ export function EventReportPage({ slug }: { slug: string }) {
           <div className="p-5 sm:p-8">
             {!isOrganizer && (
               <div className="mb-5 rounded-2xl border border-gold/40 bg-gold-soft p-4 text-sm text-ink/75">
-                This report belongs to the event organizer. Downloads are visible here for preview, but emailing requires organizer sign-in.
+                This report belongs to the Gift Party organizer. Downloads are visible here for preview, but emailing requires organizer sign-in.
               </div>
             )}
 

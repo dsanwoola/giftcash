@@ -39,7 +39,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
         contributionAmount: intent.expectedAmount,
         serviceFee: intent.serviceFee,
         donorName: intent.contribution.anonymous ? "Anonymous" : intent.contribution.name,
-        table: intent.contribution.table,
       },
     });
 
