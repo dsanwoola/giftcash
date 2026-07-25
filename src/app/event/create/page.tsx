@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Loader2, Lock, MonitorPlay, QrCode, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2, Lock, Sparkles } from "lucide-react";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -127,11 +127,6 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           <Field label="Gift goal (optional)"><input className={inputCls} inputMode="numeric" value={goal} onChange={(event) => setGoal(event.target.value.replace(/[^0-9.]/g, ""))} placeholder="e.g. 500000" /></Field>
           <Field label="Welcome message (optional)"><textarea rows={4} className={inputCls} value={story} onChange={(event) => setStory(event.target.value)} placeholder="A warm note for everyone celebrating with you…" /></Field>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Feature icon={QrCode} title="Shareable QR page" body="Guests scan and send gifts from their phones." />
-            <Feature icon={MonitorPlay} title="Live Party Mode" body="Show gifts, messages, totals and celebrations live." />
-          </div>
-
           <Toggle checked={showTotal} onClick={() => setShowTotal((value) => !value)} label="Show total received to guests" icon="👁️" />
           <Toggle checked={campaignMode} onClick={() => setCampaignMode((value) => !value)} label="Campaign contribution mode" icon="🏛️" />
           {campaignMode && (
@@ -160,5 +155,4 @@ function SuccessShare({ party }: { party: GiftEvent }) {
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block space-y-1.5"><span className="text-sm text-muted">{label}</span>{children}</label>; }
-function Feature({ icon: Icon, title, body }: { icon: React.ElementType; title: string; body: string }) { return <div className="rounded-2xl border border-ink/5 bg-white p-4"><span className="grid h-10 w-10 place-items-center rounded-xl bg-brand-soft text-brand"><Icon className="h-4 w-4" /></span><p className="mt-2 text-sm font-semibold">{title}</p><p className="mt-1 text-xs text-muted">{body}</p></div>; }
 function Toggle({ checked, onClick, label, icon }: { checked: boolean; onClick: () => void; label: string; icon: string }) { return <button type="button" onClick={onClick} className="flex min-h-12 w-full items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm"><span>{icon} {label}</span><span className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-brand" : "bg-ink/15"}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? "left-[22px]" : "left-0.5"}`} /></span></button>; }

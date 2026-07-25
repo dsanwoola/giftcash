@@ -23,6 +23,7 @@ test("Occasion access modules are absent from GiftCash", () => {
 
 test("Gift Party creation disables legacy access features", () => {
   const creator = read("src/app/event/create/page.tsx");
+  assert.doesNotMatch(creator, /Shareable QR page|Live Party Mode/);
   for (const setting of ["ticketingEnabled: false", "rsvpEnabled: false", "seatingEnabled: false", "checkInEnabled: false"]) {
     assert.match(creator, new RegExp(setting));
   }
