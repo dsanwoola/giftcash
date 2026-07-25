@@ -4,6 +4,13 @@ import crypto from "crypto";
 const FLUTTERWAVE_BASE_URL = "https://api.flutterwave.com/v3";
 const AUTH_SCHEME = ["Be", "arer"].join("");
 
+export class FlutterwaveApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = "FlutterwaveApiError";
+  }
+}
+
 export interface FlutterwaveInitializeInput {
   txRef: string;
   amount: number; // minor units
@@ -64,7 +71,7 @@ async function flutterwaveFetch<T>(path: string, init?: RequestInit): Promise<T>
   const payload = await res.json().catch(() => ({}));
   if (!res.ok || payload.status === "error") {
     const message = typeof payload.message === "string" ? payload.message : "Flutterwave request failed";
-    throw new Error(message);
+    throw new FlutterwaveApiError(message, res.status);
   }
   return payload.data as T;
 }

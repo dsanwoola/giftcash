@@ -18,9 +18,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ slug: string }>
     if (status && status !== "successful" && status !== "completed") throw new Error(`Flutterwave returned ${status}.`);
     await confirmFlutterwaveRegistryPayment(reference, { transactionId, expectedEventSlug: slug });
     destination.searchParams.set("registryPayment", "success");
-  } catch (error) {
+  } catch {
     destination.searchParams.set("registryPayment", "failed");
-    destination.searchParams.set("reason", (error instanceof Error ? error.message : "Payment verification failed").slice(0, 120));
+    destination.searchParams.set("reason", status && status !== "successful" && status !== "completed"
+      ? "The payment was not completed. You can safely try again."
+      : "We could not verify this payment yet. Please check again shortly or contact support.");
   }
   return NextResponse.redirect(destination);
 }

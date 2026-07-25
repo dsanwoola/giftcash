@@ -53,6 +53,38 @@ test("registry payments use verified Flutterwave intents and shared webhook disp
   assert.match(registryServer, /tx\.delete\(ref\)/);
 });
 
+test("registry checkout capacity remains safe across concurrency, expiry, and callbacks", () => {
+  const payments = read("src/lib/payments/flutterwave-registry-payments.ts");
+  assert.match(payments, /reservationUpdatedAt: createdAt/);
+  assert.match(payments, /reconcileExpiredReservations\(itemId\)/);
+  assert.match(payments, /verifyFlutterwaveTransactionByReference\(reservation\.reference\)/);
+  assert.match(payments, /entry\.status === "pending"\)/);
+  assert.match(payments, /item\.fundedQuantity >= item\.quantity/);
+  assert.match(payments, /item\.fundedAmount \+ intent\.expectedAmount > item\.targetAmount/);
+  assert.match(payments, /enforceCheckoutRateLimit/);
+  assert.match(payments, /You already have an active checkout for this gift/);
+  assert.match(payments, /validateContributionForEvent/);
+  assert.match(read("firestore.rules"), /registry_checkout_limits[\s\S]*allow read, write: if false/);
+});
+
+test("registry item creation and dialogs fail safely", () => {
+  const component = read("src/components/registry/gift-registry-section.tsx");
+  const server = read("src/lib/registry/server.ts");
+  assert.match(component, /initialStatus: hasImage \? "hidden" : "active"/);
+  assert.match(component, /method: "DELETE"[\s\S]*The gift was not published/);
+  assert.match(server, /input\.initialStatus === "hidden" \? "hidden" : "active"/);
+  assert.match(component, /registryPayment/);
+  assert.match(component, /window\.confirm/);
+  assert.match(component, /aria-labelledby/);
+  assert.match(component, /event\.key === "Escape"/);
+});
+
+test("payment redirects use the configured canonical public origin", () => {
+  const origin = read("src/lib/api/origin.ts");
+  assert.match(origin, /process\.env\.NEXT_PUBLIC_APP_URL/);
+  assert.match(origin, /NEXT_PUBLIC_APP_URL must use HTTPS/);
+});
+
 test("Gift Party integrates full and group registry funding without replacing cash gifts", () => {
   const eventPage = read("src/components/event/event-page.tsx");
   const registry = read("src/components/registry/gift-registry-section.tsx");

@@ -92,6 +92,7 @@ service cloud.firestore {
     match /event_registry_items/{itemId} { allow read, write: if false; }
     match /registry_contributions/{contributionId} { allow read, write: if false; }
     match /registry_reservations/{reservationId} { allow read, write: if false; }
+    match /registry_checkout_limits/{limitId} { allow read, write: if false; }
 
     // Payment authority remains server-only, including uniqueness receipts.
     match /payment_intents/{id} { allow read, write: if false; }

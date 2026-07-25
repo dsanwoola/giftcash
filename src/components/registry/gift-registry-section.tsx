@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Check, ExternalLink, Gift, Loader2, Plus, ShoppingBag, X } from "lucide-react";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { formatMoney, toMinor } from "@/lib/money";
@@ -31,6 +31,7 @@ export function GiftRegistrySection({ slug, celebrants, currency, viewerRole }: 
   const [error, setError] = useState("");
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<PublicRegistryItem | PrivateRegistryItem>();
+  const [paymentNotice, setPaymentNotice] = useState<{ kind: "success" | "error"; text: string }>();
 
   const load = useCallback(async () => {
     setError("");
@@ -43,6 +44,17 @@ export function GiftRegistrySection({ slug, celebrants, currency, viewerRole }: 
   }, [slug]);
 
   useEffect(() => { void load(); }, [load, viewerRole]);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const result = url.searchParams.get("registryPayment");
+    if (!result) return;
+    setPaymentNotice(result === "success"
+      ? { kind: "success", text: "Payment verified. Your registry gift has been recorded—thank you!" }
+      : { kind: "error", text: url.searchParams.get("reason") || "The registry payment was not completed. Please try again." });
+    url.searchParams.delete("registryPayment");
+    url.searchParams.delete("reason");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, []);
 
   if (loading) return viewerRole === "public" ? null : <div className="mt-6 grid min-h-28 place-items-center rounded-3xl border border-ink/5 bg-white/70"><Loader2 className="h-5 w-5 animate-spin text-brand" /></div>;
   if (!registry) return error ? <p className="mt-5 rounded-2xl bg-pink/10 p-4 text-sm text-pink">{error}</p> : null;
@@ -51,6 +63,7 @@ export function GiftRegistrySection({ slug, celebrants, currency, viewerRole }: 
 
   return (
     <section id="gift-registry" className="mt-6 rounded-3xl border border-brand/10 bg-white p-5 shadow-soft sm:p-6">
+      {paymentNotice && <div role="status" className={`mb-4 rounded-2xl px-4 py-3 text-sm ${paymentNotice.kind === "success" ? "bg-emerald/10 text-emerald" : "bg-pink/10 text-pink"}`}>{paymentNotice.text}</div>}
       <div className="flex items-start justify-between gap-3">
         <div><span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand"><ShoppingBag className="h-3.5 w-3.5" /> Gift Registry</span><h2 className="mt-3 font-display text-2xl font-semibold">Help us get something we’ll love</h2><p className="mt-1 text-sm text-muted">{registry.introduction || `${celebrants} have selected a few meaningful gift ideas.`}</p></div>
         {registry.viewerRole === "organizer" && <button onClick={() => setAdding(true)} className="inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full bg-brand px-3 text-sm font-medium text-white"><Plus className="h-4 w-4" /> Add</button>}
@@ -74,15 +87,18 @@ export function GiftRegistrySection({ slug, celebrants, currency, viewerRole }: 
 
 function RegistrySettings({ slug, registry, onSaved }: { slug: string; registry: RegistryPayload & { viewerRole: "organizer" | "admin" }; onSaved: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const [introduction, setIntroduction] = useState(registry.introduction ?? "");
   const save = async (enabled: boolean) => {
-    setBusy(true);
+    setBusy(true); setError("");
     try {
       await payload(await fetch(`/api/events/${slug}/registry`, { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(await tokenHeaders()) }, body: JSON.stringify({ enabled, introduction }) }));
       await onSaved();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not update the registry.");
     } finally { setBusy(false); }
   };
-  return <div className="mt-4 rounded-2xl border border-ink/10 p-3"><label className="block text-xs font-medium text-muted">Registry introduction<textarea value={introduction} onChange={(event) => setIntroduction(event.target.value)} maxLength={500} className={`${inputClass} mt-1 min-h-16`} placeholder="Tell friends what these gifts would mean to you." /></label><div className="mt-3 flex flex-wrap gap-2"><button disabled={busy} onClick={() => void save(registry.enabled)} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Save introduction</button><button disabled={busy} onClick={() => void save(!registry.enabled)} className="min-h-10 rounded-full border border-ink/10 px-4 text-sm disabled:opacity-50">{registry.enabled ? "Hide registry from guests" : "Enable registry for guests"}</button></div></div>;
+  return <div className="mt-4 rounded-2xl border border-ink/10 p-3"><label className="block text-xs font-medium text-muted">Registry introduction<textarea value={introduction} onChange={(event) => setIntroduction(event.target.value)} maxLength={500} className={`${inputClass} mt-1 min-h-16`} placeholder="Tell friends what these gifts would mean to you." /></label>{error && <p role="alert" className="mt-2 text-xs text-pink">{error}</p>}<div className="mt-3 flex flex-wrap gap-2"><button disabled={busy} onClick={() => void save(registry.enabled)} className="inline-flex min-h-10 items-center gap-2 rounded-full bg-brand px-4 text-sm font-medium text-white disabled:opacity-50">{busy && <Loader2 className="h-4 w-4 animate-spin" />}Save introduction</button><button disabled={busy} onClick={() => void save(!registry.enabled)} className="min-h-10 rounded-full border border-ink/10 px-4 text-sm disabled:opacity-50">{registry.enabled ? "Hide registry from guests" : "Enable registry for guests"}</button></div></div>;
 }
 
 function RegistryCard({ item, privateView, viewerRole, onFund, onChanged, slug }: { item: PublicRegistryItem | PrivateRegistryItem; privateView: boolean; viewerRole: RegistryPayload["viewerRole"]; onFund: () => void; onChanged: () => Promise<void>; slug: string }) {
@@ -92,11 +108,14 @@ function RegistryCard({ item, privateView, viewerRole, onFund, onChanged, slug }
   const gifted = canonical ? canonical.fundedAmount >= (totalTarget ?? 0) : publicStatus === "gifted";
   const reserved = publicStatus === "reserved";
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const mutate = async (method: "PATCH" | "DELETE", body?: object) => {
-    setBusy(true);
+    setBusy(true); setError("");
     try {
       await payload(await fetch(`/api/events/${slug}/registry/items/${item.id}`, { method, credentials: "same-origin", headers: { "Content-Type": "application/json", ...(await tokenHeaders()) }, body: body ? JSON.stringify(body) : undefined }));
       await onChanged();
+    } catch (mutationError) {
+      setError(mutationError instanceof Error ? mutationError.message : "Could not update this gift.");
     } finally { setBusy(false); }
   };
   return (
@@ -109,7 +128,8 @@ function RegistryCard({ item, privateView, viewerRole, onFund, onChanged, slug }
         {!gifted && item.targetAmount !== undefined && <p className="mt-3 font-display text-xl font-semibold">{formatMoney(item.targetAmount, item.currency)}{canonical && canonical.quantity > 1 ? " each" : ""}</p>}
         {!privateView && !gifted && <button disabled={reserved} onClick={onFund} className="mt-4 min-h-11 w-full rounded-full bg-brand px-4 text-sm font-semibold text-white disabled:bg-ink/20">{reserved ? "Someone is currently gifting this" : item.fundingMode === "full" ? "Fund this gift" : "Contribute towards it"}</button>}
         {canonical && <div className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-xs text-muted"><p>Received: <strong className="text-ink">{formatMoney(canonical.fundedAmount, canonical.currency)}</strong></p><p>Funding: {canonical.fundingMode === "full" ? "Complete gift" : "Group contributions"} • Quantity {canonical.fundedQuantity}/{canonical.quantity}</p>{canonical.activeReservationCount > 0 && <p>{canonical.activeReservationCount} active checkout reservation{canonical.activeReservationCount === 1 ? "" : "s"}</p>}{canonical.retailerReferenceUrl && <a href={canonical.retailerReferenceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-brand">Private retailer reference <ExternalLink className="h-3 w-3" /></a>}{canonical.privateNotes && <p>Private note: {canonical.privateNotes}</p>}{canonical.contributions.length > 0 && <details className="pt-1"><summary className="cursor-pointer font-semibold text-ink">{canonical.contributions.length} verified gifter{canonical.contributions.length === 1 ? "" : "s"}</summary><div className="mt-2 space-y-2">{canonical.contributions.map((contribution) => <div key={contribution.id} className="rounded-lg bg-white p-2"><div className="flex justify-between gap-2"><span className="font-medium text-ink">{contribution.name}</span><span>{formatMoney(contribution.amount, contribution.currency)}</span></div>{contribution.message && <p className="mt-1">“{contribution.message}”</p>}<p className="mt-1 text-[10px]">{new Date(contribution.createdAt).toLocaleString()}</p></div>)}</div></details>}</div>}
-        {viewerRole === "organizer" && canonical && <div className="mt-3 flex gap-2"><button disabled={busy} onClick={() => void mutate("PATCH", { status: canonical.status === "hidden" ? "active" : "hidden" })} className="min-h-9 flex-1 rounded-full border border-ink/10 px-3 text-xs">{canonical.status === "hidden" ? "Publish" : "Hide"}</button>{canonical.fundedAmount === 0 && <button disabled={busy} onClick={() => void mutate("DELETE")} className="min-h-9 rounded-full border border-pink/20 px-3 text-xs text-pink">Delete</button>}</div>}
+        {error && <p role="alert" className="mt-2 text-xs text-pink">{error}</p>}
+        {viewerRole === "organizer" && canonical && <div className="mt-3 flex gap-2"><button disabled={busy} onClick={() => void mutate("PATCH", { status: canonical.status === "hidden" ? "active" : "hidden" })} className="min-h-9 flex-1 rounded-full border border-ink/10 px-3 text-xs">{canonical.status === "hidden" ? "Publish" : "Hide"}</button>{canonical.fundedAmount === 0 && <button disabled={busy} onClick={() => { if (window.confirm(`Delete ${canonical.name}? This cannot be undone.`)) void mutate("DELETE"); }} className="min-h-9 rounded-full border border-pink/20 px-3 text-xs text-pink">Delete</button>}</div>}
         {viewerRole === "organizer" && canonical && <EditRegistryItemForm slug={slug} item={canonical} onChanged={onChanged} />}
       </div>
     </article>
@@ -145,15 +165,22 @@ function AddRegistryItem({ slug, currency, onClose, onCreated }: { slug: string;
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault(); setBusy(true); setError("");
     const form = new FormData(event.currentTarget);
+    const file = form.get("image");
+    let createdId: string | undefined;
     try {
-      const item = await payload<{ id: string }>(await fetch(`/api/events/${slug}/registry/items`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(await tokenHeaders()) }, body: JSON.stringify({ name: form.get("name"), description: form.get("description"), retailerReferenceUrl: form.get("retailerReferenceUrl"), privateNotes: form.get("privateNotes"), targetAmount: toMinor(Number(form.get("amount"))), fundingMode: form.get("fundingMode"), quantity: Number(form.get("quantity")), priority: form.get("priority") }) }));
-      const file = form.get("image");
+      const hasImage = file instanceof File && file.size > 0;
+      const item = await payload<{ id: string }>(await fetch(`/api/events/${slug}/registry/items`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(await tokenHeaders()) }, body: JSON.stringify({ name: form.get("name"), description: form.get("description"), retailerReferenceUrl: form.get("retailerReferenceUrl"), privateNotes: form.get("privateNotes"), targetAmount: toMinor(Number(form.get("amount"))), fundingMode: form.get("fundingMode"), quantity: Number(form.get("quantity")), priority: form.get("priority"), initialStatus: hasImage ? "hidden" : "active" }) }));
+      createdId = item.id;
       if (file instanceof File && file.size > 0) {
         const image = new FormData(); image.set("file", file);
         await payload(await fetch(`/api/events/${slug}/registry/items/${item.id}/image`, { method: "POST", credentials: "same-origin", headers: await tokenHeaders(), body: image }));
+        await payload(await fetch(`/api/events/${slug}/registry/items/${item.id}`, { method: "PATCH", credentials: "same-origin", headers: { "Content-Type": "application/json", ...(await tokenHeaders()) }, body: JSON.stringify({ status: "active" }) }));
       }
       onCreated();
-    } catch (submitError) { setError(submitError instanceof Error ? submitError.message : "Could not add this gift."); } finally { setBusy(false); }
+    } catch (submitError) {
+      if (createdId) await fetch(`/api/events/${slug}/registry/items/${createdId}`, { method: "DELETE", credentials: "same-origin", headers: await tokenHeaders() }).catch(() => undefined);
+      setError(submitError instanceof Error ? `${submitError.message} The gift was not published.` : "Could not add this gift.");
+    } finally { setBusy(false); }
   };
   return <Modal title="Add a registry gift" onClose={onClose}><form onSubmit={submit} className="space-y-4"><Field label="Gift name"><input name="name" required maxLength={100} className={inputClass} placeholder="Air fryer" /></Field><Field label="Description"><textarea name="description" maxLength={500} className={`${inputClass} min-h-20`} placeholder="A compact air fryer for our new kitchen" /></Field><Field label="Gift photo"><input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/heif" className="block w-full text-sm" /></Field><div className="grid grid-cols-2 gap-3"><Field label={`Value (${currency})`}><input name="amount" required type="number" min="100" step="0.01" className={inputClass} /></Field><Field label="Quantity"><input name="quantity" type="number" min="1" max="20" defaultValue="1" className={inputClass} /></Field></div><Field label="Funding model"><select name="fundingMode" className={inputClass}><option value="full">One person funds it</option><option value="group">Several people contribute</option></select></Field><Field label="Priority"><select name="priority" className={inputClass}><option value="most_wanted">Most wanted</option><option value="would_love">Would love</option><option value="nice_to_have">Nice to have</option></select></Field><Field label="Retailer reference link — private"><input name="retailerReferenceUrl" type="url" inputMode="url" className={inputClass} placeholder="https://retailer.example/item" /></Field><Field label="Private organizer note"><textarea name="privateNotes" maxLength={500} className={`${inputClass} min-h-16`} /></Field>{error && <p className="text-sm text-pink">{error}</p>}<button disabled={busy} className="min-h-12 w-full rounded-full bg-brand font-semibold text-white disabled:opacity-50">{busy ? "Adding gift…" : "Add to registry"}</button></form></Modal>;
 }
@@ -170,5 +197,26 @@ function RegistryCheckout({ slug, item, celebrants, onClose }: { slug: string; i
   return <Modal title={`Gift ${item.name}`} onClose={onClose}><p className="mb-4 rounded-2xl bg-brand-soft p-4 text-sm text-ink/75">You’re funding <strong>{item.name}</strong> for {celebrants}. GiftCash sends the value to the organizer and does not deliver the physical item.</p><form onSubmit={submit} className="space-y-4">{item.fundingMode === "group" ? <Field label={`Your contribution (${item.currency})`}><input name="amount" required type="number" min="100" step="0.01" className={inputClass} /></Field> : <p className="font-display text-2xl font-semibold">{item.targetAmount !== undefined && formatMoney(item.targetAmount, item.currency)}</p>}<Field label="Your name"><input name="name" required className={inputClass} /></Field><Field label="Email for receipt"><input name="email" required type="email" className={inputClass} /></Field><Field label="Phone (optional)"><input name="phone" type="tel" className={inputClass} /></Field><Field label="Gift message"><textarea name="message" maxLength={500} className={`${inputClass} min-h-20`} /></Field><label className="flex items-center gap-2 text-sm"><input name="anonymous" type="checkbox" /> Show me as Anonymous publicly</label>{error && <p className="text-sm text-pink">{error}</p>}<button disabled={busy} className="min-h-12 w-full rounded-full bg-brand font-semibold text-white disabled:opacity-50">{busy ? "Starting secure checkout…" : item.fundingMode === "full" ? "Pay securely and fund this gift" : "Pay secure contribution"}</button></form></Modal>;
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) { return <div className="fixed inset-0 z-50 grid items-end bg-ink/55 p-0 sm:place-items-center sm:p-4" role="dialog" aria-modal="true"><div className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 sm:max-w-lg sm:rounded-3xl sm:p-6"><div className="mb-5 flex items-center justify-between"><h3 className="font-display text-xl font-semibold">{title}</h3><button onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-cream" aria-label="Close"><X className="h-5 w-5" /></button></div>{children}</div></div>; }
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  const titleId = useId();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement as HTMLElement | null;
+    const panel = panelRef.current;
+    const focusables = () => Array.from(panel?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href]') ?? []);
+    focusables()[0]?.focus();
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
+      if (event.key !== "Tab") return;
+      const items = focusables();
+      if (!items.length) return;
+      const first = items[0]; const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", keydown);
+    return () => { document.removeEventListener("keydown", keydown); previous?.focus(); };
+  }, [onClose]);
+  return <div className="fixed inset-0 z-50 grid items-end bg-ink/55 p-0 sm:place-items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby={titleId}><div ref={panelRef} className="max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 sm:max-w-lg sm:rounded-3xl sm:p-6"><div className="mb-5 flex items-center justify-between"><h3 id={titleId} className="font-display text-xl font-semibold">{title}</h3><button type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full bg-cream" aria-label="Close"><X className="h-5 w-5" /></button></div>{children}</div></div>;
+}
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="block text-sm font-medium">{label}<span className="mt-1 block">{children}</span></label>; }

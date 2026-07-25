@@ -10,7 +10,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string; 
     if (!isFlutterwaveConfigured()) throw new HttpError(503, "Flutterwave is not configured yet.");
     const { slug, itemId } = await ctx.params;
     const input = await req.json();
-    return NextResponse.json(await createRegistryCheckout(slug, itemId, input, publicOrigin(req)));
+    return NextResponse.json(await createRegistryCheckout(slug, itemId, input, publicOrigin(req), req));
   } catch (error) {
     return fail(error);
   }

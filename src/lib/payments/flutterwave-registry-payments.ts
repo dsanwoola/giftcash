@@ -1,17 +1,95 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { nanoid } from "nanoid";
 import { adminDb } from "@/lib/firebase/admin";
 import { HttpError } from "@/lib/data/server-store";
 import { serviceFee } from "@/lib/money";
 import { calculatePlatformFee } from "@/lib/monetization";
+import { validateContributionForEvent } from "@/lib/payments/event-payments";
 import type { Contribution, CurrencyCode, GiftEvent, RegistryContribution, RegistryItem } from "@/lib/types";
 import type { RegistryReservation } from "@/lib/registry/server";
 import {
   initializeFlutterwavePayment,
+  FlutterwaveApiError,
   verifyFlutterwaveTransaction,
   verifyFlutterwaveTransactionByReference,
   type FlutterwaveVerifyResult,
 } from "./flutterwave";
+
+const CHECKOUT_WINDOW_MS = 15 * 60 * 1000;
+const CHECKOUT_LIMIT = 5;
+
+function digest(value: string) {
+  return createHash("sha256").update(value).digest("hex").slice(0, 32);
+}
+
+function checkoutClientKey(req: Request, email: string) {
+  const forwarded = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = forwarded || req.headers.get("x-real-ip")?.trim();
+  return digest(ip ? `ip:${ip}` : `email:${email.toLowerCase()}`);
+}
+
+async function enforceCheckoutRateLimit(req: Request, itemId: string, email: string) {
+  const db = adminDb();
+  const now = Date.now();
+  const clientKey = checkoutClientKey(req, email);
+  const keys = [digest(`client:${clientKey}:${itemId}`), digest(`email:${email.toLowerCase()}:${itemId}`)];
+  const refs = keys.map((key) => db.collection<{ count: number; windowStartedAt: string; expiresAt: string }>("registry_checkout_limits").doc(key));
+  await db.runTransaction(async (tx) => {
+    const snaps = await Promise.all(refs.map((ref) => tx.get(ref)));
+    const counts = snaps.map((snap) => {
+      const data = snap.data();
+      return data && now - new Date(data.windowStartedAt).getTime() < CHECKOUT_WINDOW_MS ? data.count : 0;
+    });
+    if (counts.some((count) => count >= CHECKOUT_LIMIT)) throw new HttpError(429, "Too many checkout attempts. Please wait and try again.");
+    const windowStartedAt = new Date(now).toISOString();
+    const expiresAt = new Date(now + CHECKOUT_WINDOW_MS * 2).toISOString();
+    refs.forEach((ref, index) => tx.set(ref, {
+      count: counts[index] + 1,
+      windowStartedAt: counts[index] === 0 ? windowStartedAt : snaps[index].data()!.windowStartedAt,
+      expiresAt,
+    }));
+  });
+  return clientKey;
+}
+
+async function markExpiredReservationFailed(reference: string) {
+  const db = adminDb();
+  const intentRef = db.collection<FlutterwaveRegistryIntent>("payment_intents").doc(reference);
+  const reservationRef = db.collection<RegistryReservation>("registry_reservations").doc(reference);
+  await db.runTransaction(async (tx) => {
+    const [intentSnap, reservationSnap] = await Promise.all([tx.get(intentRef), tx.get(reservationRef)]);
+    if (intentSnap.data()?.status === "confirmed" || reservationSnap.data()?.status === "confirmed") return;
+    const failedAt = new Date().toISOString();
+    if (intentSnap.exists) tx.update(intentRef, { status: "failed", providerMessage: "Hosted checkout expired without a successful payment.", failedAt });
+    if (reservationSnap.exists) tx.update(reservationRef, { status: "failed" });
+  });
+}
+
+async function reconcileExpiredReservations(itemId: string) {
+  const db = adminDb();
+  const snap = await db.collection<RegistryReservation>("registry_reservations").where("itemId", "==", itemId).get();
+  const expired = snap.docs.map((doc) => doc.data()).filter((entry) => entry.status === "pending" && new Date(entry.expiresAt).getTime() <= Date.now());
+  for (const reservation of expired) {
+    try {
+      const verified = await verifyFlutterwaveTransactionByReference(reservation.reference);
+      if (verified.status === "successful") {
+        await confirmFlutterwaveRegistryPayment(reservation.reference, { verified });
+      } else if (verified.status === "failed" || verified.status === "cancelled") {
+        await markExpiredReservationFailed(reservation.reference);
+      } else {
+        throw new HttpError(409, "A previous checkout is still being verified. Please try again shortly.");
+      }
+    } catch (error) {
+      if (error instanceof FlutterwaveApiError && error.status === 404) {
+        await markExpiredReservationFailed(reservation.reference);
+        continue;
+      }
+      if (error instanceof HttpError) throw error;
+      throw new HttpError(503, "A previous checkout could not be verified. Please try again shortly.");
+    }
+  }
+}
 
 export interface FlutterwaveRegistryIntent {
   id: string;
@@ -69,6 +147,7 @@ export async function createRegistryCheckout(
   itemId: string,
   input: { amount?: number; name?: string; anonymous?: boolean; message?: string; email?: string; phone?: string },
   origin: string,
+  req: Request,
 ) {
   const db = adminDb();
   const [eventSnap, registrySnap, itemSnap] = await Promise.all([
@@ -87,6 +166,10 @@ export async function createRegistryCheckout(
   const anonymous = Boolean(input.anonymous);
   const amount = item.fundingMode === "full" ? item.targetAmount : Number(input.amount);
   if (!Number.isInteger(amount) || amount < 10_000) throw new HttpError(400, "Contribution must be at least 100 in the event currency.");
+  const contribution = { name: cleanName(input.name, anonymous), anonymous, message: cleanMessage(input.message), amount };
+  validateContributionForEvent(event, contribution);
+  const clientKey = await enforceCheckoutRateLimit(req, itemId, email);
+  await reconcileExpiredReservations(itemId);
   const reference = await createRegistryReference();
   const createdAt = new Date().toISOString();
   // Flutterwave hosted checkout is configured globally for 30 minutes. Keep the
@@ -110,12 +193,12 @@ export async function createRegistryCheckout(
     serviceFee: fee,
     totalChargeAmount: amount + fee,
     currency: item.currency,
-    contribution: { name: cleanName(input.name, anonymous), anonymous, message: cleanMessage(input.message) },
+    contribution: { name: contribution.name, anonymous, message: contribution.message },
     status: "initialized",
     reservationExpiresAt,
     createdAt,
   };
-  const reservation: RegistryReservation = { id: reference, reference, eventSlug: slug, itemId, amount, quantity: item.fundingMode === "full" ? 1 : 0, status: "pending", expiresAt: reservationExpiresAt, createdAt };
+  const reservation: RegistryReservation = { id: reference, reference, eventSlug: slug, itemId, amount, quantity: item.fundingMode === "full" ? 1 : 0, clientKey, status: "pending", expiresAt: reservationExpiresAt, createdAt };
   const intentRef = db.collection<FlutterwaveRegistryIntent>("payment_intents").doc(reference);
   const reservationRef = db.collection<RegistryReservation>("registry_reservations").doc(reference);
   const itemRef = db.collection<RegistryItem>("event_registry_items").doc(itemId);
@@ -126,8 +209,9 @@ export async function createRegistryCheckout(
     ]);
     const freshItem = freshItemSnap.data();
     if (!freshItem || freshItem.status !== "active") throw new HttpError(409, "This registry item is unavailable.");
-    const now = Date.now();
-    const active = reservationsSnap.docs.map((doc) => doc.data()).filter((entry) => entry.status === "pending" && new Date(entry.expiresAt).getTime() > now);
+    const active = reservationsSnap.docs.map((doc) => doc.data()).filter((entry) => entry.status === "pending");
+    if (active.some((entry) => entry.clientKey === clientKey)) throw new HttpError(429, "You already have an active checkout for this gift.");
+    if (active.length >= 10) throw new HttpError(429, "This gift has too many active checkouts. Please try again shortly.");
     if (freshItem.fundingMode === "full") {
       const reservedQuantity = active.reduce((sum, entry) => sum + entry.quantity, 0);
       if (freshItem.fundedQuantity + reservedQuantity >= freshItem.quantity) throw new HttpError(409, "Someone is currently gifting this item.");
@@ -200,14 +284,16 @@ export async function confirmFlutterwaveRegistryPayment(reference: string, optio
   const receiptRef = db.collection("provider_transactions").doc(`flutterwave-${String(transactionId).replace(/[^a-zA-Z0-9_-]/g, "-")}`);
 
   await db.runTransaction(async (tx) => {
-    const [freshIntentSnap, itemSnap, eventSnap, contributionSnap, receiptSnap] = await Promise.all([
-      tx.get(intentRef), tx.get(itemRef), tx.get(eventRef), tx.get(contributionRef), tx.get(receiptRef),
+    const [freshIntentSnap, itemSnap, eventSnap, reservationSnap, contributionSnap, receiptSnap] = await Promise.all([
+      tx.get(intentRef), tx.get(itemRef), tx.get(eventRef), tx.get(reservationRef), tx.get(contributionRef), tx.get(receiptRef),
     ]);
     const freshIntent = freshIntentSnap.data();
     if (freshIntent?.status === "confirmed") return;
     const item = itemSnap.data();
     const event = eventSnap.data();
+    const reservation = reservationSnap.data();
     if (!item || !event || item.eventSlug !== intent.eventSlug) throw new HttpError(409, "Registry item is no longer available.");
+    if (!reservation || reservation.status === "failed") throw new HttpError(409, "This checkout reservation is no longer valid.");
     const receipt = receiptSnap.data() as { paymentReference?: string } | undefined;
     if (receipt && receipt.paymentReference !== ref) throw new HttpError(409, "This Flutterwave transaction has already funded another payment.");
     const existingContribution = contributionSnap.data();
@@ -229,6 +315,9 @@ export async function confirmFlutterwaveRegistryPayment(reference: string, optio
       createdAt: confirmedAt,
     };
     if (!existingContribution) {
+      if (item.fundingMode !== intent.fundingMode || item.currency !== intent.currency) throw new HttpError(409, "Registry funding terms changed before confirmation.");
+      if (item.fundingMode === "full" && (item.fundedQuantity >= item.quantity || intent.expectedAmount !== item.targetAmount)) throw new HttpError(409, "This gift has already been funded.");
+      if (item.fundingMode === "group" && item.fundedAmount + intent.expectedAmount > item.targetAmount) throw new HttpError(409, "This payment exceeds the remaining registry target.");
       const fundedAmount = item.fundedAmount + intent.expectedAmount;
       const fundedQuantity = item.fundingMode === "full" ? Math.min(item.quantity, item.fundedQuantity + 1) : (fundedAmount >= item.targetAmount ? 1 : 0);
       tx.update(itemRef, { fundedAmount, fundedQuantity, updatedAt: confirmedAt });

@@ -108,6 +108,8 @@ test("raw registry links, contributions and reservations are server-only", async
     await assertFails(getDoc(doc(db, "event_registry_items", "registry-item-a")));
     await assertFails(getDoc(doc(db, "registry_contributions", "registry-payment-a")));
     await assertFails(getDoc(doc(db, "registry_reservations", "registry-reservation-a")));
+    await assertFails(getDoc(doc(db, "registry_checkout_limits", "client-item-window")));
+    await assertFails(setDoc(doc(db, "registry_checkout_limits", "client-item-window"), { count: 0 }));
     await assertFails(setDoc(doc(db, "event_registry_items", "client-item"), { organizerId: "owner-a" }));
   }
 });

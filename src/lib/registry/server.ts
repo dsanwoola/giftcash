@@ -23,6 +23,7 @@ export interface RegistryReservation {
   itemId: string;
   amount: number;
   quantity: number;
+  clientKey?: string;
   status: "pending" | "confirmed" | "failed";
   expiresAt: string;
   createdAt: string;
@@ -207,7 +208,7 @@ export async function updateRegistry(req: Request, slug: string, input: { enable
   return updated;
 }
 
-export async function createRegistryItem(req: Request, slug: string, input: RegistryItemInput) {
+export async function createRegistryItem(req: Request, slug: string, input: RegistryItemInput & { initialStatus?: "active" | "hidden" }) {
   const { event } = await requireRegistryOrganizer(req, slug);
   const db = adminDb();
   const existing = await db.collection<RegistryItem>("event_registry_items").where("eventSlug", "==", slug).get();
@@ -226,7 +227,7 @@ export async function createRegistryItem(req: Request, slug: string, input: Regi
     currency: event.currency,
     fundedQuantity: 0,
     fundedAmount: 0,
-    status: "active",
+    status: input.initialStatus === "hidden" ? "hidden" : "active",
     sortOrder: existing.docs.length * 10 + 10,
     createdAt: now,
     updatedAt: now,
