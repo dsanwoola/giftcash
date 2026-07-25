@@ -12,7 +12,8 @@
     "payments:forward-agentmail": "node scripts/agentmail-bank-alert-forwarder.mjs",
     "test:leaderboard": "node --experimental-strip-types --test tests/contributor-leaderboard.test.ts",
     "test:product-separation": "node --experimental-strip-types --test tests/product-separation.test.ts",
-    "test:payment-integrity": "node --experimental-strip-types --test tests/payment-integrity.test.ts"
+    "test:payment-integrity": "node --experimental-strip-types --test tests/payment-integrity.test.ts",
+    "test:album-integrity": "node --experimental-strip-types --test tests/album-integrity.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -20,15 +21,16 @@
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "firebase": "^12.14.0",
-    "firebase-admin": "^13.10.0",
+    "firebase-admin": "^14.2.0",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.18.0",
     "nanoid": "^5.1.11",
-    "next": "16.2.9",
+    "next": "^16.2.11",
     "qrcode.react": "^4.2.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.79.0",
+    "sharp": "^0.35.3",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
@@ -40,11 +42,27 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint-config-next": "^16.2.11",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
   "engines": {
     "node": "22"
+  },
+  "overrides": {
+    "sharp": "$sharp",
+    "next": {
+      "postcss": "8.5.23"
+    },
+    "@google-cloud/storage": {
+      "fast-xml-parser": "5.10.1"
+    },
+    "@google-cloud/firestore": {
+      "protobufjs": "7.6.5"
+    },
+    "google-gax": {
+      "protobufjs": "7.6.5",
+      "rimraf": "6.1.3"
+    }
   }
 }

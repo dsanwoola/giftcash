@@ -2,6 +2,7 @@ import "server-only";
 import { getApps, initializeApp, applicationDefault, cert, type App } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 /**
  * Firebase-only server data/auth adapter.
@@ -97,6 +98,7 @@ export class AdminDocumentReference<T = unknown> {
     else await this.ref.set(clean);
   }
   async update(data: Partial<T>): Promise<void> { await this.ref.update(withoutUndefined(data) as FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData>); }
+  async delete(): Promise<void> { await this.ref.delete(); }
 }
 
 export class AdminQuery<T = unknown> {
@@ -149,6 +151,10 @@ export class AdminDbCompat {
 export const isAdminConfigured = true;
 export const isFirestoreConfigured = () => Boolean(firebaseProjectId());
 export function adminDb(): AdminDbCompat { return new AdminDbCompat(); }
+export function adminBucket() {
+  const bucketName = process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  return getStorage(firebaseApp()).bucket(bucketName);
+}
 
 export const adminAuth = () => ({
   async verifyIdToken(token: string) {

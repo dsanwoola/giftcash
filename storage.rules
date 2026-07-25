@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Moments Album files are written and removed only by authenticated server API
+// routes using the Admin SDK. Public viewing uses unguessable download-token URLs
+// returned only for approved photos.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

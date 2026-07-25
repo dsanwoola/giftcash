@@ -81,6 +81,12 @@ service cloud.firestore {
       allow delete: if isOwner(resource.data.organizerId);
     }
 
+    // Moments Album metadata and moderation are server-authoritative. Public
+    // clients consume a sanitized API that returns approved photos only.
+    match /event_albums/{eventId} { allow read, write: if false; }
+    match /event_album_photos/{photoId} { allow read, write: if false; }
+    match /album_photo_reports/{reportId} { allow read, write: if false; }
+
     // Payment authority remains server-only, including uniqueness receipts.
     match /payment_intents/{id} { allow read, write: if false; }
     match /provider_transactions/{id} { allow read, write: if false; }

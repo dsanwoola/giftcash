@@ -377,3 +377,59 @@ export interface GiftEvent {
   contributions: Contribution[];
   createdAt: string;
 }
+
+/* ----- Gift Party Moments Album ----- */
+export type AlbumPhase = "pre" | "post";
+export type AlbumPhotoStatus = "pending" | "approved" | "rejected";
+
+export interface EventAlbumConfig {
+  eventId: string;
+  eventSlug: string;
+  enabled: boolean;
+  guestUploadsEnabled: boolean;
+  coverPhotoId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventAlbumPhoto {
+  id: string;
+  eventId: string;
+  eventSlug: string;
+  uploaderId: string;
+  uploaderName: string;
+  phase: AlbumPhase;
+  status: AlbumPhotoStatus;
+  caption?: string;
+  imagePath: string;
+  thumbnailPath: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  width: number;
+  height: number;
+  sortOrder: number;
+  createdAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  rejectedAt?: string;
+  rejectedBy?: string;
+}
+
+export interface PublicAlbumPhoto {
+  id: string;
+  phase: AlbumPhase;
+  caption?: string;
+  imageUrl: string;
+  thumbnailUrl: string;
+  width: number;
+  height: number;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface PublicAlbumPayload {
+  enabled: boolean;
+  guestUploadsEnabled: boolean;
+  coverPhotoId?: string;
+  photos: PublicAlbumPhoto[];
+}

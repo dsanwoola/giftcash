@@ -16,6 +16,7 @@ import type { GiftEvent } from "@/lib/types";
 import { formatMoney } from "@/lib/money";
 import { occasionById } from "@/lib/occasions";
 import { useAuth } from "@/lib/auth/auth-context";
+import { MomentsAlbum } from "@/components/album/moments-album";
 
 async function loadParty(slug: string): Promise<GiftEvent | undefined> {
   try {
@@ -68,6 +69,14 @@ export function EventPage({ slug }: { slug: string }) {
           {party.showTotal && <p className="mt-3 font-display text-2xl font-semibold text-emerald">{formatMoney(total, party.currency)} received</p>}
           <div className="mt-5 grid gap-3 sm:flex"><Button onClick={() => setSheet(true)} size="lg" className="flex-1">Gift cash</Button><Button variant="outline" size="lg" onClick={() => setShareOpen(true)} className="w-full sm:w-auto"><Share2 className="h-4 w-4" /> Share</Button></div>
         </div>
+
+        <MomentsAlbum
+          slug={slug}
+          celebrants={party.celebrants}
+          eventDate={party.date}
+          isOrganizer={isOrganizer}
+          onGift={() => setSheet(true)}
+        />
 
         {isOrganizer && (
           <>
