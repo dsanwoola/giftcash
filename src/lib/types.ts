@@ -433,13 +433,10 @@ export interface PublicGiftParty {
   date: string;
   gradient: [string, string];
   currency: CurrencyCode;
-  showTotal: boolean;
   campaignMode?: boolean;
   maxContribution?: number;
   isPublic: true;
   contributionCount: number;
-  /** Present only when the organizer has enabled public totals. */
-  contributionTotal?: number;
 }
 
 export type OrganizerGiftParty = GiftEvent & {
@@ -448,7 +445,13 @@ export type OrganizerGiftParty = GiftEvent & {
   contributionTotal: number;
 };
 
-export type GiftPartyView = PublicGiftParty | OrganizerGiftParty;
+export type AdminGiftParty = GiftEvent & {
+  viewerRole: "admin";
+  contributionCount: number;
+  contributionTotal: number;
+};
+
+export type GiftPartyView = PublicGiftParty | OrganizerGiftParty | AdminGiftParty;
 
 /* ----- Gift Party Moments Album ----- */
 export type AlbumPhase = "pre" | "post";

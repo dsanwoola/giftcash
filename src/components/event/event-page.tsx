@@ -38,10 +38,11 @@ export function EventPage({ slug }: { slug: string }) {
   if (!party) return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Gift Party not found</h1><Link href="/" className="mt-4 inline-block text-brand underline">Go home</Link></div></div>;
 
   const meta = occasionById(party.type as never);
-  const total = party.contributionTotal ?? 0;
+  const total = "contributionTotal" in party ? party.contributionTotal : 0;
   const date = new Date(party.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const url = typeof window !== "undefined" ? `${window.location.origin}/party/${slug}` : `/party/${slug}`;
   const isOrganizer = party.viewerRole === "organizer";
+  const canSeeMoney = party.viewerRole === "organizer" || party.viewerRole === "admin";
 
 
   const startFlutterwaveCheckout = async (contribution: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
@@ -65,7 +66,7 @@ export function EventPage({ slug }: { slug: string }) {
           <h2 className="mt-3 font-display text-xl font-semibold">Send a cash gift</h2>
           <p className="mt-1 text-sm text-muted">Celebrate {party.celebrants} with a GiftCash contribution and personal message.</p>
           {party.campaignMode && <p className="mt-3 rounded-xl bg-gold-soft px-3 py-2 text-xs text-ink/70">Campaign contribution—your name is required{party.maxContribution ? `, up to ${formatMoney(party.maxContribution, party.currency)}` : ""}.</p>}
-          {party.showTotal && <p className="mt-3 font-display text-2xl font-semibold text-emerald">{formatMoney(total, party.currency)} received</p>}
+          {canSeeMoney && <p className="mt-3 font-display text-2xl font-semibold text-emerald">{formatMoney(total, party.currency)} received <span className="block font-sans text-xs font-normal text-muted">Private organizer/admin total</span></p>}
           <div className="mt-5 grid gap-3 sm:flex"><Button onClick={() => setSheet(true)} size="lg" className="flex-1">Gift cash</Button><Button variant="outline" size="lg" onClick={() => setShareOpen(true)} className="w-full sm:w-auto"><Share2 className="h-4 w-4" /> Share</Button></div>
         </div>
 
@@ -94,7 +95,7 @@ export function EventPage({ slug }: { slug: string }) {
               </div>
             </div>
 
-            {party.viewerRole === "organizer" && <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>}
+            {party.viewerRole === "organizer" && <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts /></div></div>}
           </>
         )}
       </div>

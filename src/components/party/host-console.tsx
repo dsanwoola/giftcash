@@ -121,7 +121,7 @@ export function HostConsole({ slug }: { slug: string }) {
         {/* Controls */}
         <div className="mt-5 space-y-3">
           <button onClick={() => set({ showTotal: !event.showTotal })} className="flex w-full items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-left text-sm">
-            <span>👁️ Show total on screen</span>
+            <span>👁️ Show total on private Party Mode screen</span>
             <span className={`relative h-6 w-11 rounded-full transition ${event.showTotal ? "bg-brand" : "bg-ink/15"}`}><span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${event.showTotal ? "left-[22px]" : "left-0.5"}`} /></span>
           </button>
 

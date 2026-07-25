@@ -127,7 +127,7 @@ function CreateForm({ organizerName, onCreated }: { organizerName: string; onCre
           <Field label="Gift goal (optional)"><input className={inputCls} inputMode="numeric" value={goal} onChange={(event) => setGoal(event.target.value.replace(/[^0-9.]/g, ""))} placeholder="e.g. 500000" /></Field>
           <Field label="Welcome message (optional)"><textarea rows={4} className={inputCls} value={story} onChange={(event) => setStory(event.target.value)} placeholder="A warm note for everyone celebrating with you…" /></Field>
 
-          <Toggle checked={showTotal} onClick={() => setShowTotal((value) => !value)} label="Show total received to guests" icon="👁️" />
+          <Toggle checked={showTotal} onClick={() => setShowTotal((value) => !value)} label="Show total in private organizer Party Mode" icon="👁️" />
           <Toggle checked={campaignMode} onClick={() => setCampaignMode((value) => !value)} label="Campaign contribution mode" icon="🏛️" />
           {campaignMode && (
             <div className="space-y-3 rounded-2xl border border-brand/15 bg-brand-soft/30 p-4">

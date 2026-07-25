@@ -1,8 +1,14 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
 import { HttpError, optionalUid, requireUid } from "@/lib/data/server-store";
-import type { GiftEvent, GiftPartyView, OrganizerGiftParty, PublicGiftParty } from "@/lib/types";
-
+import type {
+  AdminGiftParty,
+  GiftEvent,
+  GiftPartyView,
+  OrganizerGiftParty,
+  PublicGiftParty,
+  UserProfile,
+} from "@/lib/types";
 
 export async function eventBySlug(slug: string): Promise<GiftEvent> {
   const snap = await adminDb().collection<GiftEvent>("events").doc(slug).get();
@@ -19,7 +25,6 @@ export async function requireEventOrganizer(req: Request, slug: string): Promise
 }
 
 export function publicGiftParty(event: GiftEvent): PublicGiftParty {
-  const total = event.contributions.reduce((sum, contribution) => sum + contribution.amount, 0);
   return {
     viewerRole: "public",
     slug: event.slug,
@@ -29,12 +34,10 @@ export function publicGiftParty(event: GiftEvent): PublicGiftParty {
     date: event.date,
     gradient: event.gradient,
     currency: event.currency,
-    showTotal: event.showTotal,
     campaignMode: event.campaignMode,
     maxContribution: event.maxContribution,
     isPublic: true,
     contributionCount: event.contributions.length,
-    ...(event.showTotal ? { contributionTotal: total } : {}),
   };
 }
 
@@ -47,9 +50,22 @@ export function organizerGiftParty(event: GiftEvent): OrganizerGiftParty {
   };
 }
 
+export function adminGiftParty(event: GiftEvent): AdminGiftParty {
+  return {
+    ...event,
+    viewerRole: "admin",
+    contributionCount: event.contributions.length,
+    contributionTotal: event.contributions.reduce((sum, contribution) => sum + contribution.amount, 0),
+  };
+}
+
 export async function eventViewForRequest(req: Request, slug: string): Promise<GiftPartyView> {
   const [uid, event] = await Promise.all([optionalUid(req), eventBySlug(slug)]);
   if (uid && uid === event.organizerId) return organizerGiftParty(event);
+  if (uid) {
+    const profile = await adminDb().collection<UserProfile>("profiles").doc(uid).get();
+    if (profile.data()?.role === "admin") return adminGiftParty(event);
+  }
   if (event.isPublic === false) throw new HttpError(404, "Gift Party not found");
   return publicGiftParty(event);
 }
