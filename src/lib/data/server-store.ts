@@ -21,6 +21,7 @@ import type {
 } from "../types";
 import type { ContributionData, CreateGiftInput, CreateGroupGiftInput } from "./repo-types";
 import { buildSeed } from "./seed";
+import { sessionFromCookies } from "./firebase-session";
 
 /**
  * Server-authoritative operations (Admin SDK). These are the only writers to the
@@ -33,13 +34,24 @@ import { buildSeed } from "./seed";
 export async function requireUid(req: Request): Promise<string> {
   const header = req.headers.get("authorization") ?? "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!token) throw new HttpError(401, "Missing auth token");
-  try {
-    const decoded = await adminAuth().verifyIdToken(token);
-    return decoded.uid;
-  } catch {
-    throw new HttpError(401, "Invalid auth token");
+  if (token) {
+    try {
+      const decoded = await adminAuth().verifyIdToken(token);
+      return decoded.uid;
+    } catch {
+      throw new HttpError(401, "Invalid auth token");
+    }
   }
+
+  // A session cookie is created only after Firebase ID-token verification. It
+  // keeps same-origin mutations usable during a transient client token-refresh
+  // failure while preserving server-authoritative identity. Re-check Auth so a
+  // deleted or disabled Firebase user cannot keep mutating through an old cookie.
+  const sessionUser = await sessionFromCookies();
+  if (!sessionUser) throw new HttpError(401, "Missing auth token");
+  const authUser = await adminAuth().getUser(sessionUser.id).catch(() => undefined);
+  if (!authUser || authUser.disabled) throw new HttpError(401, "Your sign-in session has expired");
+  return authUser.uid;
 }
 
 export async function optionalUid(req: Request): Promise<string | undefined> {

@@ -71,17 +71,37 @@ function uid(): string {
 
 /** Send JSON to an API route with the caller's Firebase ID token attached. */
 async function authedRequest<T>(path: string, method: "POST" | "PATCH", body?: unknown): Promise<T> {
-  const token = await getFirebaseAuth().currentUser?.getIdToken();
-  const res = await fetch(path, {
+  let token: string | undefined;
+  try {
+    token = await getFirebaseAuth().currentUser?.getIdToken();
+  } catch {
+    // The verified same-site server session remains a secure fallback when the
+    // Firebase token endpoint is temporarily unreachable from the browser.
+  }
+
+  const request = () => fetch(path, {
     method,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(token ? { Authorization: "Bearer ".concat(token) } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
+  let res: Response;
+  try {
+    res = await request();
+  } catch {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    try {
+      res = await request();
+    } catch {
+      throw new Error("Could not reach GiftCash. Check your internet connection and try again.");
+    }
+  }
   if (!res.ok) {
     const msg = await res.json().catch(() => ({ error: res.statusText }));
+    if (res.status === 401) throw new Error("Your sign-in session has expired. Please sign in again.");
     throw new Error(msg.error ?? "Request failed");
   }
   return res.json() as Promise<T>;
