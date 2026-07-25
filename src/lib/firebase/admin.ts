@@ -139,6 +139,7 @@ class AdminTransaction {
     else this.tx.set(ref.ref, clean);
   }
   update<T>(ref: AdminDocumentReference<T>, data: Partial<T>) { this.tx.update(ref.ref, withoutUndefined(data) as FirebaseFirestore.UpdateData<FirebaseFirestore.DocumentData>); }
+  delete<T>(ref: AdminDocumentReference<T>) { this.tx.delete(ref.ref); }
 }
 
 export class AdminDbCompat {

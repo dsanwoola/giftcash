@@ -43,6 +43,10 @@ beforeEach(async () => {
       setDoc(doc(db, "groupGifts", "owner-group"), { organizerId: "owner-a", title: "Owner group", contributions: [] }),
       setDoc(doc(db, "gifts", "sender-gift"), { senderId: "sender-a", claimedByUserId: null, amount: 10000 }),
       setDoc(doc(db, "payment_intents", "SECRET"), { eventSlug: "owner-party", status: "pending" }),
+      setDoc(doc(db, "event_registries", "registry-a"), { eventSlug: "owner-party", organizerId: "owner-a", enabled: true }),
+      setDoc(doc(db, "event_registry_items", "registry-item-a"), { eventSlug: "owner-party", organizerId: "owner-a", retailerReferenceUrl: "https://private.example/item" }),
+      setDoc(doc(db, "registry_contributions", "registry-payment-a"), { eventSlug: "owner-party", organizerId: "owner-a", amount: 50000 }),
+      setDoc(doc(db, "registry_reservations", "registry-reservation-a"), { eventSlug: "owner-party", itemId: "registry-item-a", status: "pending" }),
     ]);
   });
 });
@@ -96,4 +100,14 @@ test("payment intents remain inaccessible to every client role", async () => {
   const owner = env.authenticatedContext("owner-a").firestore();
   await assertFails(getDoc(doc(anonymous, "payment_intents", "SECRET")));
   await assertFails(getDoc(doc(owner, "payment_intents", "SECRET")));
+});
+
+test("raw registry links, contributions and reservations are server-only", async () => {
+  for (const db of [env.unauthenticatedContext().firestore(), env.authenticatedContext("owner-a").firestore()]) {
+    await assertFails(getDoc(doc(db, "event_registries", "registry-a")));
+    await assertFails(getDoc(doc(db, "event_registry_items", "registry-item-a")));
+    await assertFails(getDoc(doc(db, "registry_contributions", "registry-payment-a")));
+    await assertFails(getDoc(doc(db, "registry_reservations", "registry-reservation-a")));
+    await assertFails(setDoc(doc(db, "event_registry_items", "client-item"), { organizerId: "owner-a" }));
+  }
 });

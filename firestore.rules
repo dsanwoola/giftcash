@@ -85,6 +85,14 @@ service cloud.firestore {
     match /event_album_photos/{photoId} { allow read, write: if false; }
     match /album_photo_reports/{reportId} { allow read, write: if false; }
 
+    // Gift Registry records include private retailer links, organizer notes,
+    // reservation state and verified payment history. Every role consumes an
+    // explicit server-side projection; no client may read or mutate raw records.
+    match /event_registries/{registryId} { allow read, write: if false; }
+    match /event_registry_items/{itemId} { allow read, write: if false; }
+    match /registry_contributions/{contributionId} { allow read, write: if false; }
+    match /registry_reservations/{reservationId} { allow read, write: if false; }
+
     // Payment authority remains server-only, including uniqueness receipts.
     match /payment_intents/{id} { allow read, write: if false; }
     match /provider_transactions/{id} { allow read, write: if false; }

@@ -17,6 +17,7 @@ import {
   type FlutterwaveVerifyResult,
 } from "./flutterwave";
 import { confirmFlutterwaveEventPayment } from "./flutterwave-event-payments";
+import { confirmFlutterwaveRegistryPayment } from "./flutterwave-registry-payments";
 
 interface ProductIntentBase {
   id: string;
@@ -201,6 +202,10 @@ export async function confirmFlutterwavePayment(
 
   if (!raw.productKind && typeof raw.eventSlug === "string") {
     const intent = await confirmFlutterwaveEventPayment(ref, options);
+    return { intent: intent as unknown as Record<string, unknown> };
+  }
+  if (raw.productKind === "registry_gift") {
+    const intent = await confirmFlutterwaveRegistryPayment(ref, options);
     return { intent: intent as unknown as Record<string, unknown> };
   }
   if (raw.productKind !== "personal_gift" && raw.productKind !== "group_gift") {

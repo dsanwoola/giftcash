@@ -17,6 +17,7 @@ import { formatMoney } from "@/lib/money";
 import { occasionById } from "@/lib/occasions";
 import { useAuth } from "@/lib/auth/auth-context";
 import { MomentsAlbum } from "@/components/album/moments-album";
+import { GiftRegistrySection } from "@/components/registry/gift-registry-section";
 
 async function loadParty(slug: string): Promise<GiftPartyView | undefined> {
   try {
@@ -69,6 +70,13 @@ export function EventPage({ slug }: { slug: string }) {
           {canSeeMoney && <p className="mt-3 font-display text-2xl font-semibold text-emerald">{formatMoney(total, party.currency)} received <span className="block font-sans text-xs font-normal text-muted">Private organizer/admin total</span></p>}
           <div className="mt-5 grid gap-3 sm:flex"><Button onClick={() => setSheet(true)} size="lg" className="flex-1">Gift cash</Button><Button variant="outline" size="lg" onClick={() => setShareOpen(true)} className="w-full sm:w-auto"><Share2 className="h-4 w-4" /> Share</Button></div>
         </div>
+
+        <GiftRegistrySection
+          slug={slug}
+          celebrants={party.celebrants}
+          currency={party.currency}
+          viewerRole={party.viewerRole}
+        />
 
         <MomentsAlbum
           slug={slug}

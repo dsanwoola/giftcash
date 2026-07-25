@@ -508,3 +508,100 @@ export interface PublicAlbumPayload {
   coverPhotoId?: string;
   photos: PublicAlbumPhoto[];
 }
+
+/* ----- Gift Party cash-backed registry ----- */
+export type RegistryFundingMode = "full" | "group";
+export type RegistryItemStatus = "active" | "hidden" | "suspended";
+
+export interface GiftRegistry {
+  id: string;
+  eventId: string;
+  eventSlug: string;
+  organizerId: string;
+  enabled: boolean;
+  introduction?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RegistryItem {
+  id: string;
+  registryId: string;
+  eventId: string;
+  eventSlug: string;
+  organizerId: string;
+  name: string;
+  description?: string;
+  imagePath?: string;
+  imageUrl?: string;
+  retailerReferenceUrl?: string;
+  privateNotes?: string;
+  targetAmount: number;
+  currency: CurrencyCode;
+  quantity: number;
+  fundedQuantity: number;
+  fundedAmount: number;
+  fundingMode: RegistryFundingMode;
+  priority: "most_wanted" | "would_love" | "nice_to_have";
+  status: RegistryItemStatus;
+  sortOrder: number;
+  /** Server-only concurrency marker; omitted from public registry projections. */
+  reservationUpdatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RegistryContribution {
+  id: string;
+  registryId: string;
+  itemId: string;
+  eventId: string;
+  eventSlug: string;
+  organizerId: string;
+  name: string;
+  anonymous: boolean;
+  message?: string;
+  amount: number;
+  currency: CurrencyCode;
+  paymentReference: string;
+  paymentProvider: "flutterwave";
+  providerTransactionId: string | number;
+  createdAt: string;
+}
+
+export interface PublicRegistryItem {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string;
+  currency: CurrencyCode;
+  fundingMode: RegistryFundingMode;
+  priority: RegistryItem["priority"];
+  publicStatus: "available" | "reserved" | "gifted";
+  /** Hidden after funding; never represents money already received. */
+  targetAmount?: number;
+  availableQuantity?: number;
+}
+
+export interface PublicRegistryPayload {
+  viewerRole: "public";
+  enabled: boolean;
+  introduction?: string;
+  items: PublicRegistryItem[];
+}
+
+export interface PrivateRegistryItem extends RegistryItem {
+  contributions: RegistryContribution[];
+  activeReservationCount: number;
+  reservedAmount: number;
+}
+
+export interface PrivateRegistryPayload {
+  viewerRole: "organizer" | "admin";
+  enabled: boolean;
+  introduction?: string;
+  items: PrivateRegistryItem[];
+  contributionTotal: number;
+}
+
+export type RegistryPayload = PublicRegistryPayload | PrivateRegistryPayload;
