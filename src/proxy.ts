@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export function proxy(request: NextRequest) {
-  if (request.nextUrl.hostname.toLowerCase() !== "www.giftcash.ng") {
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const requestHost = (forwardedHost || request.headers.get("host") || "").split(":")[0].toLowerCase();
+  if (requestHost !== "www.giftcash.ng") {
     return NextResponse.next();
   }
 
