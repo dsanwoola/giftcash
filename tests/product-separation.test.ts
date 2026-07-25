@@ -38,6 +38,13 @@ test("Gift Party is canonical for public and payment-return routes", () => {
   assert.match(read("src/app/api/events/[slug]/payments/paysure/callback/route.ts"), /`\/party\/\$\{slug\}`/);
 });
 
+test("organizer-only event sections stay hidden from invitees and gifters", () => {
+  const party = read("src/components/event/event-page.tsx");
+  assert.match(party, /user\?\.uid === party\.organizerId/);
+  assert.match(party, /isOrganizer && \(/);
+  assert.match(party, /isOrganizer && <SetupGuide/);
+});
+
 test("public GiftCash surfaces use GiftCash branding", () => {
   assert.doesNotMatch(read("src/app/page.tsx"), /Occasion\.ng/);
   assert.doesNotMatch(read("src/app/layout.tsx"), /Occasion\.ng/);

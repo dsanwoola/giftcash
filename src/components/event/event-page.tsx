@@ -15,6 +15,7 @@ import { repo } from "@/lib/data/repo";
 import type { GiftEvent } from "@/lib/types";
 import { formatMoney } from "@/lib/money";
 import { occasionById } from "@/lib/occasions";
+import { useAuth } from "@/lib/auth/auth-context";
 
 async function loadParty(slug: string): Promise<GiftEvent | undefined> {
   try {
@@ -28,6 +29,7 @@ async function loadParty(slug: string): Promise<GiftEvent | undefined> {
 
 export function EventPage({ slug }: { slug: string }) {
   const { data: party, loading } = useRepoData(() => loadParty(slug), [slug]);
+  const { user, loading: authLoading } = useAuth();
   const [sheet, setSheet] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -39,6 +41,7 @@ export function EventPage({ slug }: { slug: string }) {
   const total = party.contributions.reduce((sum, contribution) => sum + contribution.amount, 0);
   const date = new Date(party.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const url = typeof window !== "undefined" ? `${window.location.origin}/party/${slug}` : `/party/${slug}`;
+  const isOrganizer = !authLoading && user?.uid === party.organizerId;
 
 
   const startFlutterwaveCheckout = async (contribution: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
@@ -66,26 +69,30 @@ export function EventPage({ slug }: { slug: string }) {
           <div className="mt-5 grid gap-3 sm:flex"><Button onClick={() => setSheet(true)} size="lg" className="flex-1">Gift cash</Button><Button variant="outline" size="lg" onClick={() => setShareOpen(true)} className="w-full sm:w-auto"><Share2 className="h-4 w-4" /> Share</Button></div>
         </div>
 
-        {party.story && <p className="mt-5 rounded-2xl bg-white/70 p-5 text-center text-sm text-muted">{party.story}</p>}
+        {isOrganizer && (
+          <>
+            {party.story && <p className="mt-5 rounded-2xl bg-white/70 p-5 text-center text-sm text-muted">{party.story}</p>}
 
-        <div className="mt-5 flex items-center gap-4 rounded-3xl border border-ink/5 bg-white/70 p-4 sm:p-5"><div className="rounded-2xl bg-white p-2 shadow-soft"><QRCodeSVG value={url} size={92} fgColor="#1b1226" /></div><div><p className="font-medium">Scan to send a GiftCash</p><p className="text-sm text-muted">Display this QR at the celebration or share it anywhere.</p></div></div>
+            <div className="mt-5 flex items-center gap-4 rounded-3xl border border-ink/5 bg-white/70 p-4 sm:p-5"><div className="rounded-2xl bg-white p-2 shadow-soft"><QRCodeSVG value={url} size={92} fgColor="#1b1226" /></div><div><p className="font-medium">Scan to send a GiftCash</p><p className="text-sm text-muted">Display this QR at the celebration or share it anywhere.</p></div></div>
 
-        <div className="mt-5 rounded-3xl border border-brand/15 bg-brand-soft/40 p-5">
-          <p className="flex items-center gap-2 text-sm font-semibold text-brand"><MonitorPlay className="h-4 w-4" /> Party Mode tools</p>
-          <p className="mt-1 text-sm text-muted">Celebrate gifts on the big screen, control the show from your phone and export a gifter report.</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <ButtonLink href={`/party/${slug}/live`} variant="dark" className="w-full"><MonitorPlay className="h-4 w-4" /> Big screen</ButtonLink>
-            <ButtonLink href={`/party/${slug}/host`} variant="primary" className="w-full"><Settings2 className="h-4 w-4" /> Host console</ButtonLink>
-            <ButtonLink href={`/party/${slug}/report`} variant="gold" className="w-full"><FileSpreadsheet className="h-4 w-4" /> Gifters report</ButtonLink>
-            <button onClick={() => setSetupOpen(true)} className="w-full rounded-full border border-ink/15 bg-white/70 px-4 py-2.5 text-sm hover:border-brand/40"><HelpCircle className="mr-1 inline h-4 w-4" /> Setup help</button>
-          </div>
-        </div>
+            <div className="mt-5 rounded-3xl border border-brand/15 bg-brand-soft/40 p-5">
+              <p className="flex items-center gap-2 text-sm font-semibold text-brand"><MonitorPlay className="h-4 w-4" /> Party Mode tools</p>
+              <p className="mt-1 text-sm text-muted">Celebrate gifts on the big screen, control the show from your phone and export a gifter report.</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <ButtonLink href={`/party/${slug}/live`} variant="dark" className="w-full"><MonitorPlay className="h-4 w-4" /> Big screen</ButtonLink>
+                <ButtonLink href={`/party/${slug}/host`} variant="primary" className="w-full"><Settings2 className="h-4 w-4" /> Host console</ButtonLink>
+                <ButtonLink href={`/party/${slug}/report`} variant="gold" className="w-full"><FileSpreadsheet className="h-4 w-4" /> Gifters report</ButtonLink>
+                <button onClick={() => setSetupOpen(true)} className="w-full rounded-full border border-ink/15 bg-white/70 px-4 py-2.5 text-sm hover:border-brand/40"><HelpCircle className="mr-1 inline h-4 w-4" /> Setup help</button>
+              </div>
+            </div>
 
-        <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>
+            <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>
+          </>
+        )}
       </div>
 
       <ContributeSheet open={sheet} onClose={() => setSheet(false)} onStartCheckout={startFlutterwaveCheckout} currency={party.currency} ctaLabel={`Gift ${party.celebrants}`} requireName={party.campaignMode} maxAmount={party.maxContribution} />
-      <SetupGuide open={setupOpen} onClose={() => setSetupOpen(false)} liveUrl={typeof window !== "undefined" ? `${window.location.origin}/party/${slug}/live` : `/party/${slug}/live`} />
+      {isOrganizer && <SetupGuide open={setupOpen} onClose={() => setSetupOpen(false)} liveUrl={typeof window !== "undefined" ? `${window.location.origin}/party/${slug}/live` : `/party/${slug}/live`} />}
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} url={url} title={party.title} heading={`Share ${party.celebrants}’s Gift Party`} defaultMessage={shareMessage} qrLabel="Scan to send a GiftCash" calendar={{ title: party.title, details: `Celebrate ${party.celebrants} with a cash gift: ${url}`, start: party.date }} />
     </div>
   );
