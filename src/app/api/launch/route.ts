@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { REVENUE_PLANS, MONETIZATION_CHANNELS } from "@/lib/monetization";
 import { isPaysureConfigured } from "@/lib/payments/paysure";
 import { isFlutterwaveConfigured } from "@/lib/payments/flutterwave";
+import { requireAdmin } from "@/lib/data/server-store";
+import { fail } from "@/lib/api/handle";
 
-export async function GET() {
+export async function GET(req: Request) {
+  try {
+    await requireAdmin(req);
   const paystackConfigured = Boolean(process.env.PAYSTACK_SECRET_KEY?.trim());
   const paysureConfigured = isPaysureConfigured();
   const flutterwaveConfigured = isFlutterwaveConfigured();
@@ -71,4 +75,7 @@ export async function GET() {
       { item: "Bank-alert reconciliation", status: agentMailConfigured ? "configured" : "optional_not_configured" },
     ],
   });
+  } catch (error) {
+    return fail(error);
+  }
 }

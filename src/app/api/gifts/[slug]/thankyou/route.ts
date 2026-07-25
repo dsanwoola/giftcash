@@ -6,10 +6,10 @@ import type { ThankYou } from "@/lib/types";
 // POST /api/gifts/[slug]/thankyou — recipient sends a thank-you note.
 export async function POST(req: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
-    await requireUid(req);
+    const uid = await requireUid(req);
     const { slug } = await ctx.params;
     const thankYou = (await req.json()) as ThankYou;
-    await saveThankYou(slug, thankYou);
+    await saveThankYou(slug, uid, thankYou);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return fail(e);

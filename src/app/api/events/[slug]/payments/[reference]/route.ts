@@ -7,38 +7,23 @@ import type { PaystackEventPaymentIntent } from "@/lib/payments/event-payments";
 import type { PaysureEventPaymentIntent } from "@/lib/payments/paysure-event-payments";
 import type { FlutterwaveEventPaymentIntent } from "@/lib/payments/flutterwave-event-payments";
 
+type EventIntent = BankTransferPaymentIntent | PaystackEventPaymentIntent | PaysureEventPaymentIntent | FlutterwaveEventPaymentIntent;
+
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string; reference: string }> }) {
   try {
     const { slug, reference } = await ctx.params;
-    const snap = await adminDb().collection("payment_intents").doc(reference.toUpperCase()).get();
-    const intent = snap.data() as (BankTransferPaymentIntent | PaystackEventPaymentIntent | PaysureEventPaymentIntent | FlutterwaveEventPaymentIntent | undefined);
-    if (!intent || intent.eventSlug !== slug) throw new HttpError(404, "Payment reference not found");
-    if ("provider" in intent && (intent.provider === "paystack" || intent.provider === "paysure" || intent.provider === "flutterwave")) {
-      return NextResponse.json({
-        provider: intent.provider,
-        reference: intent.reference,
-        status: intent.status,
-        expectedAmount: intent.expectedAmount,
-        serviceFee: intent.serviceFee,
-        totalChargeAmount: intent.totalChargeAmount,
-        currency: intent.currency,
-        confirmedAt: intent.confirmedAt,
-        providerStatus: intent.providerStatus,
-      });
+    const safeReference = reference.toUpperCase();
+    const snap = await adminDb().collection("payment_intents").doc(safeReference).get();
+    const intent = snap.data() as EventIntent | undefined;
+    if (!intent || intent.eventSlug !== slug || "totalTransferAmount" in intent) {
+      throw new HttpError(404, "Payment reference not found");
     }
-    const bankIntent = intent as BankTransferPaymentIntent;
     return NextResponse.json({
-      reference: bankIntent.reference,
-      status: bankIntent.status,
-      expectedAmount: bankIntent.expectedAmount,
-      serviceFee: bankIntent.serviceFee,
-      totalTransferAmount: bankIntent.totalTransferAmount,
-      currency: bankIntent.currency,
-      reviewReason: bankIntent.reviewReason,
-      confirmedAt: bankIntent.confirmedAt,
-      expiresAt: bankIntent.expiresAt,
+      reference: safeReference,
+      status: intent.status,
+      confirmedAt: intent.confirmedAt,
     });
-  } catch (e) {
-    return fail(e);
+  } catch (error) {
+    return fail(error);
   }
 }

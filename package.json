@@ -13,7 +13,11 @@
     "test:leaderboard": "node --experimental-strip-types --test tests/contributor-leaderboard.test.ts",
     "test:product-separation": "node --experimental-strip-types --test tests/product-separation.test.ts",
     "test:payment-integrity": "node --experimental-strip-types --test tests/payment-integrity.test.ts",
-    "test:album-integrity": "node --experimental-strip-types --test tests/album-integrity.test.ts"
+    "test:album-integrity": "node --experimental-strip-types --test tests/album-integrity.test.ts",
+    "test:security": "node --experimental-strip-types --test tests/production-security.test.ts",
+    "test:rules:emulator": "node --test tests/firestore-rules.test.mjs",
+    "test:rules": "npx --yes firebase-tools@15.24.0 emulators:exec --only firestore --project giftcash-rules-test \"npm run test:rules:emulator\"",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
@@ -36,6 +40,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",

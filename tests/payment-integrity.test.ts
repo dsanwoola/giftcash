@@ -23,7 +23,8 @@ test("group gifts use verified checkout instead of direct contribution writes", 
   const rules = read("firestore.rules");
   assert.doesNotMatch(rules, /hasOnly\(\['contributions'\]\)/);
   assert.match(rules, /match \/gifts\/\{slug\}[\s\S]*?allow write: if false/);
-  assert.match(rules, /allow get: if true;[\s\S]*?allow list: if isSignedIn/);
+  assert.doesNotMatch(rules, /match \/gifts\/\{slug\}[\s\S]*?allow get: if true/);
+  assert.match(rules, /resource\.data\.claimedByUserId == request\.auth\.uid/);
 });
 
 test("legacy direct monetary writes are blocked", () => {
@@ -49,8 +50,8 @@ test("one Flutterwave webhook dispatcher confirms every GiftCash product", () =>
   assert.match(store, /This Flutterwave transaction has already funded another payment/);
   assert.match(payments, /status === 425/);
   const eventStatus = read("src/app/api/events/[slug]/payments/[reference]/route.ts");
-  assert.match(eventStatus, /FlutterwaveEventPaymentIntent/);
-  assert.match(eventStatus, /intent\.provider === "flutterwave"/);
+  assert.match(eventStatus, /status: intent\.status/);
+  assert.doesNotMatch(eventStatus, /providerStatus|totalChargeAmount|settlementAccount/);
   assert.match(read("src/app/api/events/[slug]/payments/flutterwave/callback/route.ts"), /expectedEventSlug: slug/);
   assert.doesNotMatch(read("src/components/social/contribute-sheet.tsx"), /demo-only fallback|onContribute/);
 });

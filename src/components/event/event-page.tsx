@@ -11,26 +11,25 @@ import { ContributeSheet, type ContributionInput } from "@/components/social/con
 import { ShareModal } from "@/components/share/share-modal";
 import { SetupGuide } from "@/components/party/setup-guide";
 import { useRepoData } from "@/lib/data/use-repo";
-import { repo } from "@/lib/data/repo";
-import type { GiftEvent } from "@/lib/types";
+import { fetchGiftParty } from "@/lib/events/client";
+import type { GiftPartyView } from "@/lib/types";
 import { formatMoney } from "@/lib/money";
 import { occasionById } from "@/lib/occasions";
 import { useAuth } from "@/lib/auth/auth-context";
 import { MomentsAlbum } from "@/components/album/moments-album";
 
-async function loadParty(slug: string): Promise<GiftEvent | undefined> {
+async function loadParty(slug: string): Promise<GiftPartyView | undefined> {
   try {
-    const response = await fetch(`/api/events/${slug}`, { cache: "no-store" });
-    if (response.ok) return (await response.json()) as GiftEvent;
+    return await fetchGiftParty(slug);
   } catch (error) {
-    console.warn("Falling back to local Gift Party store", error);
+    console.warn("Could not load Gift Party", error);
   }
-  return (await repo.getEvent(slug)) ?? undefined;
+  return undefined;
 }
 
 export function EventPage({ slug }: { slug: string }) {
-  const { data: party, loading } = useRepoData(() => loadParty(slug), [slug]);
   const { user, loading: authLoading } = useAuth();
+  const { data: party, loading } = useRepoData(() => loadParty(slug), [slug, authLoading, user?.uid]);
   const [sheet, setSheet] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
@@ -39,10 +38,10 @@ export function EventPage({ slug }: { slug: string }) {
   if (!party) return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Gift Party not found</h1><Link href="/" className="mt-4 inline-block text-brand underline">Go home</Link></div></div>;
 
   const meta = occasionById(party.type as never);
-  const total = party.contributions.reduce((sum, contribution) => sum + contribution.amount, 0);
+  const total = party.contributionTotal ?? 0;
   const date = new Date(party.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const url = typeof window !== "undefined" ? `${window.location.origin}/party/${slug}` : `/party/${slug}`;
-  const isOrganizer = !authLoading && user?.uid === party.organizerId;
+  const isOrganizer = party.viewerRole === "organizer";
 
 
   const startFlutterwaveCheckout = async (contribution: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
@@ -57,7 +56,7 @@ export function EventPage({ slug }: { slug: string }) {
   return (
     <div className="min-h-dvh bg-cream">
       <div className="relative px-4 pb-14 pt-5 text-cream sm:px-5 sm:pb-16 sm:pt-6" style={{ background: `linear-gradient(150deg, ${party.gradient[0]}, ${party.gradient[1]})` }}>
-        <div className="mx-auto max-w-lg"><div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-cream/80 hover:text-cream">Dashboard</Link></div><div className="mt-10 text-center"><span className="rounded-full bg-white/15 px-3 py-1 text-xs">{meta.emoji} Gift Party</span><h1 className="mt-4 text-balance font-display text-3xl font-semibold leading-tight sm:text-4xl">{party.celebrants}</h1><p className="mt-2 inline-flex items-center gap-1.5 text-cream/85"><CalendarDays className="h-4 w-4" /> {date}</p></div></div>
+        <div className="mx-auto max-w-lg"><div className="flex items-center justify-between"><Logo />{isOrganizer ? <Link href="/dashboard" className="text-sm text-cream/80 hover:text-cream">Dashboard</Link> : <Link href="/" className="text-sm text-cream/80 hover:text-cream">Home</Link>}</div><div className="mt-10 text-center"><span className="rounded-full bg-white/15 px-3 py-1 text-xs">{meta.emoji} Gift Party</span><h1 className="mt-4 text-balance font-display text-3xl font-semibold leading-tight sm:text-4xl">{party.celebrants}</h1><p className="mt-2 inline-flex items-center gap-1.5 text-cream/85"><CalendarDays className="h-4 w-4" /> {date}</p></div></div>
       </div>
 
       <div className="mx-auto -mt-10 max-w-lg px-4 pb-12 sm:px-5">
@@ -80,7 +79,7 @@ export function EventPage({ slug }: { slug: string }) {
 
         {isOrganizer && (
           <>
-            {party.story && <p className="mt-5 rounded-2xl bg-white/70 p-5 text-center text-sm text-muted">{party.story}</p>}
+            {party.viewerRole === "organizer" && party.story && <p className="mt-5 rounded-2xl bg-white/70 p-5 text-center text-sm text-muted">{party.story}</p>}
 
             <div className="mt-5 flex items-center gap-4 rounded-3xl border border-ink/5 bg-white/70 p-4 sm:p-5"><div className="rounded-2xl bg-white p-2 shadow-soft"><QRCodeSVG value={url} size={92} fgColor="#1b1226" /></div><div><p className="font-medium">Scan to send a GiftCash</p><p className="text-sm text-muted">Display this QR at the celebration or share it anywhere.</p></div></div>
 
@@ -95,7 +94,7 @@ export function EventPage({ slug }: { slug: string }) {
               </div>
             </div>
 
-            <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>
+            {party.viewerRole === "organizer" && <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>}
           </>
         )}
       </div>

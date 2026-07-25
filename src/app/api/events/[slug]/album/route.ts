@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { fail } from "@/lib/api/handle";
-import { requireUid } from "@/lib/data/server-store";
+import { HttpError, optionalUid, requireUid } from "@/lib/data/server-store";
 import {
   getAlbumConfig,
   listAlbumPhotos,
@@ -12,10 +12,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: Request, ctx: { params: Promise<{ slug: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await ctx.params;
     const event = await requireAlbumEvent(slug);
+    const uid = await optionalUid(req);
+    if (event.isPublic === false && uid !== event.organizerId) throw new HttpError(404, "Gift Party not found");
     const [config, photos] = await Promise.all([
       getAlbumConfig(event),
       listAlbumPhotos(event.id),

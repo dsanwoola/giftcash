@@ -7,7 +7,7 @@ import { Copy, X } from "lucide-react";
 import { useState } from "react";
 
 const steps = [
-  { icon: "🔗", title: "Open the screen link", body: "On the device that drives your TV/projector, open the Big screen link below (or scan the QR with that device)." },
+  { icon: "🔗", title: "Sign in on the screen device", body: "On the laptop or device that drives your TV/projector, sign in with the organizer's GiftCash account, then open the Big screen link below." },
   { icon: "🖥️", title: "Connect to the display", body: "Easiest: a laptop in Chrome, fullscreen, via HDMI to the TV/projector. Or use a smart-TV browser, Chromecast/AirPlay, or a Fire TV / Android TV browser." },
   { icon: "🔊", title: "Wire up sound", body: "Plug the laptop's audio into the venue speakers/PA so the fanfare is heard. Sound turns on when you tap “Start the show”." },
   { icon: "📶", title: "Stay online", body: "The screen needs internet for live updates (venue Wi-Fi or a hotspot). Disable the device's sleep/screensaver." },
@@ -59,7 +59,7 @@ export function SetupGuide({ open, onClose, liveUrl }: { open: boolean; onClose:
               </div>
             </div>
 
-            <p className="mt-3 text-center text-xs text-muted">It&apos;s self-serve — no account needed on the screen. You only need help with the physical HDMI/projector if the venue handles that.</p>
+            <p className="mt-3 text-center text-xs text-muted">For privacy, the screen device must remain signed in as the owning organizer. Sign out when the event ends or before returning a hired device.</p>
           </motion.div>
         </motion.div>
       )}

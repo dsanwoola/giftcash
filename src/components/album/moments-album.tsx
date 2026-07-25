@@ -84,8 +84,13 @@ export function MomentsAlbum({ slug, celebrants, eventDate, isOrganizer, onGift 
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const publicResponse = await fetch(`/api/events/${slug}/album`, { cache: "no-store" });
-    if (publicResponse.ok) setAlbum((await publicResponse.json()) as PublicAlbumPayload);
+    const publicPayload = isOrganizer
+      ? await authedFetch(`/api/events/${slug}/album`)
+      : await fetch(`/api/events/${slug}/album`, { cache: "no-store" }).then(async (response) => {
+          if (!response.ok) return null;
+          return response.json();
+        });
+    if (publicPayload) setAlbum(publicPayload as PublicAlbumPayload);
     if (isOrganizer) {
       const payload = await authedFetch(`/api/events/${slug}/album/photos`);
       setManager(payload as ManagerPayload);

@@ -160,4 +160,7 @@ export const adminAuth = () => ({
   async verifyIdToken(token: string) {
     return getAuth(firebaseApp()).verifyIdToken(token);
   },
+  async getUser(uid: string) {
+    return getAuth(firebaseApp()).getUser(uid);
+  },
 });

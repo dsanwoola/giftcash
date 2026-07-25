@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server";
-import { contributeToEvent } from "@/lib/data/server-store";
-import { fail } from "@/lib/api/handle";
-import type { ContributionData } from "@/lib/data/repo-types";
-
-// POST /api/events/[slug]/contribute — public (guests aren't signed in).
-// Server-validates campaign rules + contribution caps before appending.
-// TODO: gate on a verified payment + add rate limiting before production.
-export async function POST(req: Request, ctx: { params: Promise<{ slug: string }> }) {
-  try {
-    const { slug } = await ctx.params;
-    const data = (await req.json()) as ContributionData;
-    const event = await contributeToEvent(slug, data);
-    return NextResponse.json(event);
-  } catch (e) {
-    return fail(e);
-  }
+// Contributions are appended only after a payment-provider callback has been
+// verified server-side. This legacy direct-write route is permanently closed.
+export async function POST() {
+  return NextResponse.json(
+    { error: "Direct contributions are disabled. Start a verified payment checkout." },
+    { status: 410 },
+  );
 }

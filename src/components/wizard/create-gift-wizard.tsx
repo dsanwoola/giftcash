@@ -121,10 +121,12 @@ export function CreateGiftWizard() {
         return amountMinor >= toMinor(100);
       case 4:
         return form.message.trim().length > 0;
+      case 5:
+        return !form.privateGift || Boolean(form.recipientEmail.trim() || form.recipientPhone.replace(/\D/g, ""));
       default:
         return true;
     }
-  }, [step, form.recipientName, form.message, amountMinor]);
+  }, [step, form.recipientName, form.message, form.privateGift, form.recipientEmail, form.recipientPhone, amountMinor]);
 
   const next = () => setStep((s) => Math.min(STEPS.length - 1, s + 1));
   const back = () => setStep((s) => Math.max(0, s - 1));
@@ -346,6 +348,9 @@ export function CreateGiftWizard() {
                   )}
                   <Toggle label="🎁 Mystery gift (hide amount until opened)" checked={form.mystery} onChange={(v) => set("mystery", v)} />
                   <Toggle label="🔒 Make it private" checked={form.privateGift} onChange={(v) => set("privateGift", v)} />
+                  {form.privateGift && !form.recipientEmail.trim() && !form.recipientPhone.replace(/\D/g, "") && (
+                    <p className="rounded-xl bg-gold-soft px-3 py-2 text-xs text-ink/70">Add the recipient&apos;s email or phone number in the Amount &amp; delivery step so GiftCash can verify who opens it.</p>
+                  )}
                   <Toggle label="🕶️ Send anonymously" checked={form.anonymous} onChange={(v) => set("anonymous", v)} />
                 </Section>
               )}

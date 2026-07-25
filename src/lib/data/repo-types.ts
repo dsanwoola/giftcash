@@ -3,8 +3,10 @@ import type {
   CurrencyCode,
   EventType,
   Gift,
+  GiftView,
   GiftEvent,
   GroupGift,
+  GroupGiftView,
   LedgerEntry,
   OccasionId,
   EventTicketType,
@@ -122,7 +124,7 @@ export interface GiftRepo {
   currentUserId(): string;
 
   // Gifts
-  getGift(slug: string): Promise<Gift | null>;
+  getGift(slug: string): Promise<Gift | GiftView | null>;
   listSentGifts(userId?: string): Promise<Gift[]>;
   listReceivedGifts(userId?: string): Promise<Gift[]>;
   createGift(input: CreateGiftInput): Promise<Gift>;
@@ -137,7 +139,7 @@ export interface GiftRepo {
   listWithdrawals(userId: string): Promise<Withdrawal[]>;
 
   // Group gifting
-  getGroupGift(slug: string): Promise<GroupGift | null>;
+  getGroupGift(slug: string): Promise<GroupGift | GroupGiftView | null>;
   listGroupGifts(userId?: string): Promise<GroupGift[]>;
   createGroupGift(input: CreateGroupGiftInput): Promise<GroupGift>;
   contributeToGroup(slug: string, contribution: ContributionData): Promise<GroupGift>;

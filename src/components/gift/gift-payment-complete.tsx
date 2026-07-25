@@ -7,10 +7,10 @@ import { QRCodeSVG } from "qrcode.react";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { repo } from "@/lib/data/repo";
-import type { Gift } from "@/lib/types";
+import type { Gift, GiftView } from "@/lib/types";
 
 export function GiftPaymentComplete({ payment, slug, reference, reason }: { payment?: string; slug?: string; reference?: string; reason?: string }) {
-  const [gift, setGift] = useState<Gift | null | undefined>(undefined);
+  const [gift, setGift] = useState<Gift | GiftView | null | undefined>(undefined);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {

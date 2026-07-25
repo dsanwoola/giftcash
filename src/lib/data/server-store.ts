@@ -19,7 +19,7 @@ import type {
   Wallet,
   Withdrawal,
 } from "../types";
-import type { ContributionData, CreateGiftInput } from "./repo-types";
+import type { ContributionData, CreateGiftInput, CreateGroupGiftInput } from "./repo-types";
 import { buildSeed } from "./seed";
 
 /**
@@ -40,6 +40,11 @@ export async function requireUid(req: Request): Promise<string> {
   } catch {
     throw new HttpError(401, "Invalid auth token");
   }
+}
+
+export async function optionalUid(req: Request): Promise<string | undefined> {
+  if (!req.headers.get("authorization")) return undefined;
+  return requireUid(req);
 }
 
 export async function requireAdmin(req: Request): Promise<string> {
@@ -149,6 +154,17 @@ export function validateGiftInput(input: CreateGiftInput) {
   const recipientName = cleanText(input.recipientName, "Recipient name");
   const senderName = cleanText(input.senderName, "Sender name");
   const message = cleanText(input.message, "Gift message", 1, 500);
+  const recipientEmail = input.recipientEmail?.trim();
+  const recipientPhone = input.recipientPhone?.replace(/\D/g, "");
+  if (recipientEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+    throw new HttpError(400, "Enter a valid recipient email address.");
+  }
+  if (recipientPhone && (recipientPhone.length < 10 || recipientPhone.length > 15)) {
+    throw new HttpError(400, "Enter a valid recipient phone number.");
+  }
+  if (input.privateGift && !recipientEmail && !recipientPhone) {
+    throw new HttpError(400, "A private gift needs the recipient's email or phone number.");
+  }
   return { recipientName, senderName, message, fee: serviceFee(input.amount) };
 }
 
@@ -194,7 +210,9 @@ export async function createVerifiedGift(
     scheduledAt: input.scheduledAt,
     revealGate: input.revealGate,
     revealQuestion: input.revealQuestion,
-    revealAnswer: input.revealAnswer,
+    revealAnswerHash: input.revealAnswer
+      ? createHash("sha256").update(input.revealAnswer.trim().toLowerCase()).digest("hex")
+      : undefined,
     mystery: input.mystery,
     privateGift: input.privateGift,
     status: "delivered",
@@ -255,18 +273,35 @@ export async function createVerifiedGift(
   });
 }
 
-export async function openGift(slug: string): Promise<void> {
+export async function openGift(slug: string, answer?: string): Promise<Gift> {
   const ref = adminDb().collection("gifts").doc(slug);
   const snap = await ref.get();
   const gift = snap.data() as Gift | undefined;
-  if (!gift || gift.openedAt) return;
+  if (!gift) throw new HttpError(404, "Gift not found");
+  if (gift.scheduledAt && new Date(gift.scheduledAt).getTime() > Date.now()) {
+    throw new HttpError(423, "This gift is still locked.");
+  }
+  if (gift.revealGate === "question") {
+    const normalized = answer?.trim().toLowerCase() ?? "";
+    const digest = createHash("sha256").update(normalized).digest("hex");
+    const valid = gift.revealAnswerHash
+      ? digest === gift.revealAnswerHash
+      : normalized !== "" && normalized === gift.revealAnswer?.trim().toLowerCase();
+    if (!valid) throw new HttpError(403, "That answer is not correct.");
+  }
+  if (gift.openedAt) return gift;
   const status = gift.status === "delivered" || gift.status === "funded" ? "opened" : gift.status;
-  await ref.update({ openedAt: new Date().toISOString(), status });
+  const openedAt = new Date().toISOString();
+  await ref.update({ openedAt, status });
+  return { ...gift, openedAt, status };
 }
 
 /** One-time claim, enforced inside a transaction. */
 export async function claimGift(slug: string, claimerUid: string): Promise<Gift> {
   const db = adminDb();
+  const claimer = await adminAuth().getUser(claimerUid);
+  const claimerEmail = claimer.email?.trim().toLowerCase();
+  const claimerPhone = claimer.phoneNumber?.replace(/\D/g, "").slice(-10);
   const giftRef = db.collection("gifts").doc(slug);
   const gift = await db.runTransaction(async (tx) => {
     const snap = await tx.get(giftRef);
@@ -274,6 +309,13 @@ export async function claimGift(slug: string, claimerUid: string): Promise<Gift>
     if (!g) throw new HttpError(404, "Gift not found");
     if (g.claimStatus === "claimed") throw new HttpError(409, "This gift has already been claimed.");
     if (g.status === "expired") throw new HttpError(410, "This gift has expired.");
+    const expectedEmail = g.recipientEmail?.trim().toLowerCase();
+    const expectedPhone = g.recipientPhone?.replace(/\D/g, "").slice(-10);
+    if ((expectedEmail || expectedPhone)
+      && expectedEmail !== claimerEmail
+      && expectedPhone !== claimerPhone) {
+      throw new HttpError(403, "Sign in with the intended recipient's email or phone number.");
+    }
 
     const claimedAt = new Date().toISOString();
     tx.update(giftRef, { claimStatus: "claimed", status: "claimed", claimedAt, claimedByUserId: claimerUid });
@@ -288,8 +330,19 @@ export async function claimGift(slug: string, claimerUid: string): Promise<Gift>
   return gift;
 }
 
-export async function saveThankYou(slug: string, thankYou: ThankYou): Promise<void> {
-  await adminDb().collection("gifts").doc(slug).update({ thankYou });
+export async function saveThankYou(slug: string, recipientUid: string, thankYou: ThankYou): Promise<void> {
+  const ref = adminDb().collection<Gift>("gifts").doc(slug);
+  const gift = (await ref.get()).data();
+  if (!gift) throw new HttpError(404, "Gift not found");
+  if (gift.claimedByUserId !== recipientUid) throw new HttpError(403, "Only the recipient can send this thank-you.");
+  const message = thankYou.message?.trim();
+  const emoji = thankYou.emoji?.trim();
+  if (message && message.length > 500) throw new HttpError(400, "Thank-you message is too long.");
+  if (emoji && emoji.length > 12) throw new HttpError(400, "Thank-you emoji is too long.");
+  const cleaned: ThankYou = { createdAt: new Date().toISOString() };
+  if (message) cleaned.message = message;
+  if (emoji) cleaned.emoji = emoji;
+  await ref.update({ thankYou: cleaned });
 }
 
 /* ---------- Event contributions (server-validated) ---------- */
@@ -370,6 +423,40 @@ export async function appendVerifiedEventContribution(slug: string, data: Contri
     tx.update(ref, { contributions });
     return { ...event, contributions };
   });
+}
+
+export async function createServerGroupGift(organizerUid: string, input: CreateGroupGiftInput): Promise<GroupGift> {
+  const recipientName = cleanText(input.recipientName, "Recipient name");
+  const title = cleanText(input.title, "Group gift title", 2, 120);
+  const organizerName = cleanText(input.organizerName, "Organizer name");
+  validateMinorAmount(input.targetAmount, "Target amount");
+  const deadline = new Date(input.deadline);
+  if (!Number.isFinite(deadline.getTime()) || deadline.getTime() <= Date.now()) {
+    throw new HttpError(400, "Choose a future deadline.");
+  }
+  const story = input.story?.trim();
+  if (story && story.length > 1000) throw new HttpError(400, "Group gift story is too long.");
+  const base = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "group-gift";
+  const slug = `${base}-${nanoid(6)}`;
+  const group: GroupGift = {
+    id: nanoid(),
+    slug,
+    organizerId: organizerUid,
+    organizerName,
+    occasion: input.occasion,
+    theme: input.theme,
+    recipientName,
+    title,
+    story: story || undefined,
+    targetAmount: input.targetAmount,
+    currency: input.currency,
+    deadline: deadline.toISOString(),
+    status: "open",
+    contributions: [],
+    createdAt: new Date().toISOString(),
+  };
+  await adminDb().collection<GroupGift>("groupGifts").doc(slug).set(group);
+  return group;
 }
 
 export async function appendVerifiedGroupContribution(slug: string, data: ContributionData, meta: VerifiedFlutterwaveMeta): Promise<GroupGift> {

@@ -1,14 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { ArrowLeft, Download, FileSpreadsheet, FileText, Loader2, Mail, Send } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Download, FileSpreadsheet, FileText, Loader2, Lock, Mail, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth/auth-context";
 import { getFirebaseAuth } from "@/lib/firebase/client";
-import { repo } from "@/lib/data/repo";
-import { useRepoData } from "@/lib/data/use-repo";
+import { fetchOrganizerGiftParty } from "@/lib/events/client";
 import { formatMoney } from "@/lib/money";
+import type { OrganizerGiftParty } from "@/lib/types";
 import {
   buildEventReportExcelHtml,
   buildEventReportPdfBytes,
@@ -21,19 +22,41 @@ import {
 } from "@/lib/reports/event-report";
 
 export function EventReportPage({ slug }: { slug: string }) {
-  const { user, mode } = useAuth();
-  const { data: event, loading } = useRepoData(() => repo.getEvent(slug), [slug]);
+  const { user, mode, loading: authLoading } = useAuth();
+  const [event, setEvent] = useState<OrganizerGiftParty | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [email, setEmail] = useState(user?.email ?? "");
   const [emailFormat, setEmailFormat] = useState<EventReportFormat>("excel");
   const [sending, setSending] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let active = true;
+    fetchOrganizerGiftParty(slug)
+      .then((value) => { if (active) { setEvent(value); setLoadError(null); } })
+      .catch((reason) => { if (active) setLoadError(reason instanceof Error ? reason.message : "Report unavailable."); });
+    return () => { active = false; };
+  }, [authLoading, slug, user]);
+
+  useEffect(() => {
+    if (user?.email && !email) setEmail(user.email);
+  }, [email, user?.email]);
+
   const rows = useMemo(() => (event ? eventReportRows(event) : []), [event]);
   const summary = useMemo(() => (event ? eventReportSummary(event) : null), [event]);
 
-  if (loading) {
+  if (authLoading) {
     return <div className="grid min-h-dvh place-items-center bg-cream"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>;
+  }
+
+  if (!user) {
+    return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><Lock className="mx-auto h-8 w-8 text-brand" /><h1 className="mt-4 font-display text-2xl font-semibold">Organizer sign-in required</h1><p className="mt-1 text-muted">Gifters reports are private to the owning organizer.</p><ButtonLink href={`/login?next=/party/${slug}/report`} className="mt-5">Sign in</ButtonLink></div></div>;
+  }
+
+  if (loadError) {
+    return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><Lock className="mx-auto h-8 w-8 text-brand" /><h1 className="mt-4 font-display text-2xl font-semibold">Organizer access only</h1><p className="mt-1 text-muted">Only the owning organizer can access this report.</p><ButtonLink href={`/party/${slug}`} variant="outline" className="mt-5">View Gift Party</ButtonLink></div></div>;
   }
 
   if (!event || !summary) {
@@ -50,7 +73,7 @@ export function EventReportPage({ slug }: { slug: string }) {
 
   const total = formatMoney(summary.totalAmount, event.currency);
   const average = formatMoney(summary.averageGift, event.currency);
-  const isOrganizer = !user || user.uid === event.organizerId;
+
 
   const downloadExcel = () => {
     const html = buildEventReportExcelHtml(event);
@@ -103,11 +126,6 @@ export function EventReportPage({ slug }: { slug: string }) {
           </div>
 
           <div className="p-5 sm:p-8">
-            {!isOrganizer && (
-              <div className="mb-5 rounded-2xl border border-gold/40 bg-gold-soft p-4 text-sm text-ink/75">
-                This report belongs to the Gift Party organizer. Downloads are visible here for preview, but emailing requires organizer sign-in.
-              </div>
-            )}
 
             <div className="grid gap-3 sm:grid-cols-4">
               <Stat label="Total gifted" value={total} />

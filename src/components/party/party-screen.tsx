@@ -1,23 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
-import { Eye, EyeOff, Loader2, Maximize, Play, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Maximize, Play, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { repo } from "@/lib/data/repo";
+import { useAuth } from "@/lib/auth/auth-context";
+import { fetchOrganizerGiftParty, updateOrganizerGiftParty } from "@/lib/events/client";
 import { formatMoney, toMinor } from "@/lib/money";
 import { celebrate, fireworks } from "@/lib/confetti";
 import { SOUND_THEMES, playGiftSound, playWhoosh, unlockAudio, type SoundTheme } from "@/lib/sound";
 import { rankContributors, type ContributorRank } from "@/lib/contributions/leaderboard";
-import type { Contribution, CurrencyCode, GiftEvent } from "@/lib/types";
-
-const TEST_NAMES = ["Aunty Ngozi", "Chidi", "The Okafors", "Bisi & Tunde", "Uncle Sam", "Kemi", "Emeka", "Fatima", "Grandma Rose", "David O.", "The Adeyemis", "Zainab"];
-const TEST_AMOUNTS = [5000, 10000, 20000, 25000, 50000, 100000];
-const rand = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+import type { Contribution, CurrencyCode, OrganizerGiftParty } from "@/lib/types";
 
 export function PartyScreen({ slug }: { slug: string }) {
-  const [event, setEvent] = useState<GiftEvent | null | undefined>(undefined);
+  const { user, loading: authLoading } = useAuth();
+  const [event, setEvent] = useState<OrganizerGiftParty | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
   const [celebration, setCelebration] = useState<Contribution | null>(null);
   const [queue, setQueue] = useState<Contribution[]>([]);
@@ -30,8 +29,22 @@ export function PartyScreen({ slug }: { slug: string }) {
   useEffect(() => { if (event) themeRef.current = event.soundTheme ?? "fanfare"; }, [event]);
 
 
-  // Live subscription (Firestore onSnapshot live; cross-tab in demo).
-  useEffect(() => repo.subscribeEvent(slug, setEvent), [slug]);
+  // Poll the owner-verified API so the display never reads raw public Firestore data.
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let active = true;
+    const load = async () => {
+      try {
+        const value = await fetchOrganizerGiftParty(slug);
+        if (active) { setEvent(value); setLoadError(null); }
+      } catch (error) {
+        if (active) setLoadError(error instanceof Error ? error.message : "Party Mode unavailable.");
+      }
+    };
+    load();
+    const timer = window.setInterval(load, 2500);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [authLoading, slug, user]);
 
   // Diff incoming contributions → celebration queue (only after the show starts).
   useEffect(() => {
@@ -73,26 +86,18 @@ export function PartyScreen({ slug }: { slug: string }) {
     try { await document.documentElement.requestFullscreen?.(); } catch { /* ignore */ }
   };
 
-  const addTestGift = useCallback(() => {
-    repo.contributeToEvent(slug, {
-      name: rand(TEST_NAMES),
-      anonymous: Math.random() < 0.12,
-      amount: toMinor(rand(TEST_AMOUNTS)),
-
-      message: Math.random() < 0.4 ? rand(["Congratulations! 🎉", "So happy for you ❤️", "God bless you both 🙏", "Enjoy! 🥳"]) : undefined,
-    });
-  }, [slug]);
-
-  if (event === undefined) {
+  if (authLoading) {
     return <div className="grid min-h-dvh place-items-center bg-ink text-cream"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
-  if (event === null) {
+  if (!user) {
     return (
       <div className="grid min-h-dvh place-items-center bg-ink px-6 text-center text-cream">
-        <div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Gift Party not found</h1><Link href="/" className="mt-4 inline-block text-gold underline">Go home</Link></div>
+        <div><Lock className="mx-auto h-9 w-9 text-gold" /><h1 className="mt-4 font-display text-2xl font-semibold">Organizer sign-in required</h1><p className="mt-2 text-cream/60">Party Mode contains private event controls and verified gift details.</p><Link href={`/login?next=/party/${slug}/live`} className="mt-5 inline-block rounded-full bg-gold px-6 py-3 font-medium text-ink">Sign in</Link></div>
       </div>
     );
   }
+  if (loadError) return <div className="grid min-h-dvh place-items-center bg-ink px-6 text-center text-cream"><div><Lock className="mx-auto h-9 w-9 text-gold" /><h1 className="mt-4 font-display text-2xl font-semibold">Organizer access only</h1><p className="mt-2 text-cream/60">Only the owning organizer can open this Party Mode screen.</p><Link href={`/party/${slug}`} className="mt-4 inline-block text-gold underline">View Gift Party</Link></div></div>;
+  if (!event) return <div className="grid min-h-dvh place-items-center bg-ink text-cream"><Loader2 className="h-8 w-8 animate-spin" /></div>;
 
   const showTotal = event.showTotal;
   const theme = event.soundTheme ?? "fanfare";
@@ -100,6 +105,10 @@ export function PartyScreen({ slug }: { slug: string }) {
   const total = event.contributions.reduce((s, c) => s + c.amount, 0);
   const url = typeof window !== "undefined" ? `${window.location.origin}/party/${event.slug}` : "";
   const bg = `radial-gradient(80% 60% at 50% 0%, ${event.gradient[0]} 0%, #0c0712 60%), #0c0712`;
+  const updateSettings = async (settings: Parameters<typeof updateOrganizerGiftParty>[1]) => {
+    const updated = await updateOrganizerGiftParty(slug, settings);
+    setEvent(updated);
+  };
 
   return (
     <div className="relative min-h-dvh overflow-hidden text-cream" style={{ background: bg }}>
@@ -115,7 +124,7 @@ export function PartyScreen({ slug }: { slug: string }) {
         <div className="flex items-center gap-3 md:gap-5">
           <Stat label="Gifts" value={String(event.contributions.length)} />
           <div className="h-10 w-px bg-white/10" />
-          <button onClick={() => repo.updateEventSettings(slug, { showTotal: !showTotal })} className="group flex items-center gap-2 text-left" title="Show/hide total">
+          <button onClick={() => updateSettings({ showTotal: !showTotal })} className="group flex items-center gap-2 text-left" title="Show/hide total">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-cream/50">Total raised</p>
               <p className="font-display text-2xl font-semibold gold-foil md:text-3xl">
@@ -162,7 +171,7 @@ export function PartyScreen({ slug }: { slug: string }) {
             {SOUND_THEMES.map((s) => (
               <button
                 key={s.id}
-                onClick={() => { repo.updateEventSettings(slug, { soundTheme: s.id }); playGiftSound(s.id); }}
+                onClick={() => { updateSettings({ soundTheme: s.id }); playGiftSound(s.id); }}
                 title={s.label}
                 className={`rounded-full px-2.5 py-1 text-sm transition ${theme === s.id ? "bg-gold text-ink" : "hover:bg-white/10"}`}
               >
@@ -171,7 +180,6 @@ export function PartyScreen({ slug }: { slug: string }) {
             ))}
           </div>
           <div className="absolute bottom-5 right-5 z-30 flex gap-2">
-            <button onClick={addTestGift} className="rounded-full bg-white/10 px-4 py-2 text-xs backdrop-blur hover:bg-white/20">＋ Simulate gift</button>
             <button onClick={() => document.documentElement.requestFullscreen?.()} className="grid h-9 w-9 place-items-center rounded-full bg-white/10 backdrop-blur hover:bg-white/20"><Maximize className="h-4 w-4" /></button>
           </div>
         </>

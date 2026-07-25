@@ -7,27 +7,39 @@ import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SetupGuide } from "@/components/party/setup-guide";
-import { repo } from "@/lib/data/repo";
 import { useAuth } from "@/lib/auth/auth-context";
+import { fetchOrganizerGiftParty, updateOrganizerGiftParty } from "@/lib/events/client";
 import { formatMoney, toMinor } from "@/lib/money";
 import { contributionsToCsv, downloadCsv } from "@/lib/csv";
 import { SOUND_THEMES, playGiftSound, unlockAudio } from "@/lib/sound";
-import type { GiftEvent } from "@/lib/types";
+import type { OrganizerGiftParty } from "@/lib/types";
 
 
 export function HostConsole({ slug }: { slug: string }) {
   const { user, loading: authLoading } = useAuth();
-  const [event, setEvent] = useState<GiftEvent | null | undefined>(undefined);
+  const [event, setEvent] = useState<OrganizerGiftParty | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [goalInput, setGoalInput] = useState("");
   const [goalEditing, setGoalEditing] = useState(false);
   const [setupOpen, setSetupOpen] = useState(false);
 
-  useEffect(() => repo.subscribeEvent(slug, setEvent), [slug]);
+  useEffect(() => {
+    if (authLoading || !user) return;
+    let active = true;
+    const load = async () => {
+      try {
+        const value = await fetchOrganizerGiftParty(slug);
+        if (active) { setEvent(value); setLoadError(null); }
+      } catch (error) {
+        if (active) setLoadError(error instanceof Error ? error.message : "This host console is unavailable.");
+      }
+    };
+    load();
+    const timer = window.setInterval(load, 3000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [authLoading, slug, user]);
 
-  if (event === undefined || authLoading) return <div className="grid min-h-dvh place-items-center bg-cream"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>;
-  if (event === null) {
-    return <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center"><div><p className="text-5xl">🔍</p><h1 className="mt-3 font-display text-2xl font-semibold">Gift Party not found</h1><Link href="/" className="mt-4 inline-block text-brand underline">Go home</Link></div></div>;
-  }
+  if (authLoading) return <div className="grid min-h-dvh place-items-center bg-cream"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>;
 
   // Organizer-only: the console can change live settings, so it must be the host.
   if (!user) {
@@ -44,24 +56,28 @@ export function HostConsole({ slug }: { slug: string }) {
       </AuthShell>
     );
   }
-  if (user.uid !== event.organizerId) {
+  if (loadError) {
     return (
       <div className="grid min-h-dvh place-items-center bg-cream px-6 text-center">
         <div>
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-pink/10 text-pink"><Lock className="h-6 w-6" /></span>
-          <h1 className="mt-4 font-display text-2xl font-semibold">You&apos;re not the host</h1>
-          <p className="mt-1 text-muted">Only {event.organizerName} can control this Gift Party.</p>
+          <h1 className="mt-4 font-display text-2xl font-semibold">Organizer access only</h1>
+          <p className="mt-1 text-muted">Only the owning organizer can open this host console.</p>
           <ButtonLink href={`/party/${slug}`} variant="outline" className="mt-5">View the Gift Party</ButtonLink>
         </div>
       </div>
     );
   }
+  if (!event) return <div className="grid min-h-dvh place-items-center bg-cream"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>;
 
   const total = event.contributions.reduce((s, c) => s + c.amount, 0);
   const theme = event.soundTheme ?? "fanfare";
   const liveUrl = typeof window !== "undefined" ? `${window.location.origin}/party/${slug}/live` : "";
 
-  const set = (s: Parameters<typeof repo.updateEventSettings>[1]) => repo.updateEventSettings(slug, s);
+  const set = async (settings: Parameters<typeof updateOrganizerGiftParty>[1]) => {
+    const updated = await updateOrganizerGiftParty(slug, settings);
+    setEvent(updated);
+  };
 
   const pickTheme = async (id: typeof SOUND_THEMES[number]["id"]) => {
     await unlockAudio();

@@ -11,6 +11,7 @@ import {
 import { isPaysureConfigured } from "@/lib/payments/paysure";
 import type { ContributionData } from "@/lib/data/repo-types";
 import type { GiftEvent } from "@/lib/types";
+import { requirePublicGiftParty } from "@/lib/events/access";
 
 export async function POST(req: Request, ctx: { params: Promise<{ slug: string }> }) {
   try {
@@ -21,6 +22,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ slug: string }
     const eventSnap = await db.collection("events").doc(slug).get();
     const event = eventSnap.data() as GiftEvent | undefined;
     if (!event) throw new HttpError(404, "Event not found");
+    requirePublicGiftParty(event);
     validateContributionForEvent(event, data);
 
     const reference = await createUniquePaysureReference();

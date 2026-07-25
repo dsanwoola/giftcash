@@ -2,9 +2,8 @@ rules_version = '2';
 
 // Gift Cash — Firestore security rules.
 // Fintech posture: wallets & ledger are read-only to clients (written only by
-// trusted server / Cloud Functions via the Admin SDK). Gifts are publicly
-// readable by slug (the reveal link is the capability) but only the sender can
-// mutate metadata, and claims are server-enforced.
+// trusted server / Cloud Functions via the Admin SDK). Public gifting pages use
+// explicit server-side projections; raw financial records are never public.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -41,12 +40,16 @@ service cloud.firestore {
       allow write: if false; // append-only, server side only
     }
 
-    // Gift reveal pages are available by unguessable slug, but bulk listing is private.
+    // Raw gifts contain recipient contact, reveal and provider data. Public reveal
+    // pages consume /api/gifts/[slug], which returns an explicit safe projection.
     match /gifts/{slug} {
-      allow get: if true;
+      allow get: if isSignedIn() && (
+        resource.data.senderId == request.auth.uid ||
+        resource.data.claimedByUserId == request.auth.uid
+      );
       allow list: if isSignedIn() && (
         resource.data.senderId == request.auth.uid ||
-        resource.data.recipientId == request.auth.uid
+        resource.data.claimedByUserId == request.auth.uid
       );
       // All gift creation and mutation is performed by authenticated API routes
       // with Admin SDK after provider verification.
@@ -60,25 +63,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Group gifts: anyone with the link can read; only the organizer changes the
-    // document. Paid contributions are appended by verified server callbacks.
+    // Group gift documents contain organizer ids and payment metadata. Public
+    // pages consume a sanitized server projection instead of raw documents.
     match /groupGifts/{slug} {
-      allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
-      allow update: if isOwner(resource.data.organizerId);
-      allow delete: if isOwner(resource.data.organizerId);
+      allow read: if isOwner(resource.data.organizerId);
+      allow create, update, delete: if false;
     }
 
-    // Event pages: public read; only the organizer edits settings (show total,
-    // sound, goal). Contributions are written ONLY by the server (Admin SDK) via
-    // /api/events/[slug]/contribute, so campaign caps & donor rules can't be
-    // bypassed by a client.
+    // Gift Party documents contain organizer setup, contributor and settlement
+    // data. Only the owning organizer may read them directly. Public visitors
+    // consume the explicit safe projection returned by /api/events/[slug].
     match /events/{slug} {
-      allow read: if true;
-      allow create: if isSignedIn() && request.resource.data.organizerId == request.auth.uid;
-      allow update: if isOwner(resource.data.organizerId)
-        && !( 'contributions' in request.resource.data.diff(resource.data).affectedKeys() );
-      allow delete: if isOwner(resource.data.organizerId);
+      allow read: if isOwner(resource.data.organizerId);
+      // Event creation and every mutation use owner-verified server APIs.
+      allow create, update, delete: if false;
     }
 
     // Moments Album metadata and moderation are server-authoritative. Public

@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  arrayUnion,
   collection,
   doc,
   getDoc,
@@ -9,20 +8,18 @@ import {
   onSnapshot,
   orderBy,
   query,
-  setDoc,
-  updateDoc,
   where,
   type DocumentData,
   type Query,
 } from "firebase/firestore";
-import { nanoid } from "nanoid";
 import { getDb, getFirebaseAuth } from "../firebase/client";
 import type {
   BankAccount,
-  Contribution,
   Gift,
+  GiftView,
   GiftEvent,
   GroupGift,
+  GroupGiftView,
   LedgerEntry,
   ThankYou,
   UserProfile,
@@ -42,10 +39,9 @@ import type {
  * FIRESTORE repo.
  *
  * Split of responsibility (matches firestore.rules):
- *  - READS and non-ledger writes (create group/event, append contributions) use
- *    the client SDK directly.
- *  - LEDGER-affecting writes (fund gift, claim, withdrawals) go through Admin-SDK
- *    API routes under /api so the append-only ledger stays server-authoritative.
+ *  - Owner-scoped reads use the client SDK directly.
+ *  - Creation, payments, claims, settings and ledger mutations use authenticated
+ *    Admin-SDK API routes so canonical records stay server-authoritative.
  *
  * Dates are stored as ISO strings to keep documents identical to the domain
  * types (no Timestamp conversion needed).
@@ -60,8 +56,6 @@ const COL = {
   profiles: "profiles",
 } as const;
 
-const slugify = (name: string) =>
-  `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "gift"}-${nanoid(6)}`;
 
 const byCreatedDesc = <T extends { createdAt: string }>(a: T, b: T) =>
   +new Date(b.createdAt) - +new Date(a.createdAt);
@@ -75,11 +69,11 @@ function uid(): string {
   return getFirebaseAuth().currentUser?.uid ?? "";
 }
 
-/** POST JSON to an API route with the caller's Firebase ID token attached. */
-async function authedPost<T>(path: string, body?: unknown): Promise<T> {
+/** Send JSON to an API route with the caller's Firebase ID token attached. */
+async function authedRequest<T>(path: string, method: "POST" | "PATCH", body?: unknown): Promise<T> {
   const token = await getFirebaseAuth().currentUser?.getIdToken();
   const res = await fetch(path, {
-    method: "POST",
+    method,
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -93,14 +87,22 @@ async function authedPost<T>(path: string, body?: unknown): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+const authedPost = <T>(path: string, body?: unknown) => authedRequest<T>(path, "POST", body);
+
 export const firestoreRepo: GiftRepo = {
   currentUserId: () => uid(),
 
   /* ---------- Gifts ---------- */
 
   async getGift(slug) {
-    const d = await getDoc(doc(getDb(), COL.gifts, slug));
-    return d.exists() ? (d.data() as Gift) : null;
+    const token = await getFirebaseAuth().currentUser?.getIdToken();
+    const response = await fetch(`/api/gifts/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Could not load this gift.");
+    return (await response.json()) as GiftView;
   },
 
   async listSentGifts(userId = uid()) {
@@ -171,8 +173,14 @@ export const firestoreRepo: GiftRepo = {
   /* ---------- Group gifting ---------- */
 
   async getGroupGift(slug) {
-    const d = await getDoc(doc(getDb(), COL.groupGifts, slug));
-    return d.exists() ? (d.data() as GroupGift) : null;
+    const token = await getFirebaseAuth().currentUser?.getIdToken();
+    const response = await fetch(`/api/groups/${encodeURIComponent(slug)}`, {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error("Could not load this group gift.");
+    return (await response.json()) as GroupGiftView;
   },
 
   async listGroupGifts(userId = uid()) {
@@ -181,41 +189,11 @@ export const firestoreRepo: GiftRepo = {
   },
 
   async createGroupGift(input: CreateGroupGiftInput) {
-    const group: GroupGift = {
-      id: nanoid(),
-      slug: slugify(input.title || input.recipientName),
-      organizerId: uid(),
-      organizerName: input.organizerName,
-      occasion: input.occasion,
-      theme: input.theme,
-      recipientName: input.recipientName,
-      title: input.title,
-      story: input.story,
-      targetAmount: input.targetAmount,
-      currency: input.currency,
-      deadline: input.deadline,
-      status: "open",
-      contributions: [],
-      createdAt: new Date().toISOString(),
-    };
-    await setDoc(doc(getDb(), COL.groupGifts, group.slug), group);
-    return group;
+    return authedPost<GroupGift>("/api/groups", input);
   },
 
-  async contributeToGroup(slug, contribution: ContributionData) {
-    const c: Contribution = {
-      id: nanoid(),
-      name: contribution.anonymous ? "Anonymous" : contribution.name || "A friend",
-      anonymous: contribution.anonymous,
-      amount: contribution.amount,
-      message: contribution.message,
-      createdAt: new Date().toISOString(),
-    };
-    await updateDoc(doc(getDb(), COL.groupGifts, slug), { contributions: arrayUnion(c) });
-    const updated = await this.getGroupGift(slug);
-    if (!updated) throw new Error("Group gift not found");
-    updated.contributions = [...updated.contributions].sort(byCreatedDesc);
-    return updated;
+  async contributeToGroup() {
+    throw new Error("Direct group contributions are disabled. Start a verified payment checkout.");
   },
 
   /* ---------- Gift Party gifting ---------- */
@@ -235,15 +213,7 @@ export const firestoreRepo: GiftRepo = {
   },
 
   async updateEventSettings(slug, settings) {
-    // Only write defined keys (Firestore rejects undefined values).
-    const patch: Record<string, unknown> = {};
-    if (settings.showTotal !== undefined) patch.showTotal = settings.showTotal;
-    if (settings.soundTheme !== undefined) patch.soundTheme = settings.soundTheme;
-    if (settings.goalAmount !== undefined) patch.goalAmount = settings.goalAmount;
-    await updateDoc(doc(getDb(), COL.events, slug), patch);
-    const updated = await this.getEvent(slug);
-    if (!updated) throw new Error("Event not found");
-    return updated;
+    return authedRequest<GiftEvent>(`/api/events/${slug}`, "PATCH", settings);
   },
 
   // Server-validated (campaign caps/donor rules enforced in the API route).

@@ -69,12 +69,12 @@ export async function getFirebaseEvent(slug: string): Promise<GiftEvent | undefi
   return snap.data() ?? seedEvent(slug);
 }
 
-export async function listFirebaseEvents(limit = 25): Promise<GiftEvent[]> {
-  const snap = await adminDb().collection<GiftEvent>("events").orderBy("createdAt", "desc").limit(limit).get();
-  const events = snap.docs.map((doc) => doc.data());
-  const seed = seedEvent("tunde-and-zainab");
-  if (seed && !events.some((event) => event.slug === seed.slug)) events.push(seed);
-  return events;
+export async function listFirebaseEvents(organizerId: string, limit = 25): Promise<GiftEvent[]> {
+  const snap = await adminDb().collection<GiftEvent>("events")
+    .where("organizerId", "==", organizerId)
+    .limit(limit)
+    .get();
+  return snap.docs.map((doc) => doc.data()).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 }
 
 async function saveEvent(event: GiftEvent) {

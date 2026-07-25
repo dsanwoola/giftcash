@@ -4,9 +4,10 @@ import { requireUid } from "@/lib/data/server-store";
 import { fail } from "@/lib/api/handle";
 import type { CreateEventInput } from "@/lib/data/repo-types";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const events = await listFirebaseEvents();
+    const uid = await requireUid(req);
+    const events = await listFirebaseEvents(uid);
     return NextResponse.json({ events });
   } catch (e) {
     return fail(e);

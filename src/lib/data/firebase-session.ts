@@ -22,13 +22,8 @@ function expiresIso() {
   return new Date(Date.now() + TTL_DAYS * 86_400_000).toISOString();
 }
 
-function userIdFor(email?: string, phone?: string) {
-  const raw = (email || phone || `guest-${nanoid(8)}`).toLowerCase();
-  return `occ-${raw.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || nanoid(8)}`;
-}
-
-export async function createSession(input: { uid?: string; name?: string; email?: string; phone?: string }): Promise<{ user: UserProfile; session: OccasionSession }> {
-  const id = input.uid || userIdFor(input.email, input.phone);
+export async function createSession(input: { uid: string; name?: string; email?: string; phone?: string }): Promise<{ user: UserProfile; session: OccasionSession }> {
+  const id = input.uid;
   const existing = await adminDb().collection<UserProfile>("profiles").doc(id).get();
   const existingData = existing.data();
   const user: UserProfile = {

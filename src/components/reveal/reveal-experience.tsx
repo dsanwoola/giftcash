@@ -17,26 +17,35 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
 import { GiftVisual } from "./gift-visual";
 import { repo } from "@/lib/data/repo";
+import { useAuth } from "@/lib/auth/auth-context";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { occasionById, themeById } from "@/lib/occasions";
 import { formatMoney } from "@/lib/money";
 import { burst, celebrate, fireworks } from "@/lib/confetti";
-import type { Gift } from "@/lib/types";
+import type { Gift, GiftView } from "@/lib/types";
 
 type Stage = "intro" | "message" | "amount" | "claim" | "claimed";
 
 export function RevealExperience({ slug }: { slug: string }) {
-  const [gift, setGift] = useState<Gift | null | undefined>(undefined);
+  const { user, loading: authLoading } = useAuth();
+  const [gift, setGift] = useState<Gift | GiftView | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("intro");
   const [opening, setOpening] = useState(false);
   const [answer, setAnswer] = useState("");
   const [gateError, setGateError] = useState("");
 
   useEffect(() => {
+    if (authLoading) return;
     repo.getGift(slug).then((g) => {
       setGift(g);
+      setLoadError(null);
       if (g?.claimStatus === "claimed") setStage("claimed");
+    }).catch((reason) => {
+      setGift(undefined);
+      setLoadError(reason instanceof Error ? reason.message : "This gift is unavailable.");
     });
-  }, [slug]);
+  }, [authLoading, slug, user?.uid]);
 
   const fireTheme = useCallback((theme: string) => {
     if (theme === "fireworks") fireworks();
@@ -45,31 +54,57 @@ export function RevealExperience({ slug }: { slug: string }) {
 
   const open = useCallback(async () => {
     if (!gift) return;
-    if (gift.revealGate === "question" && gift.revealAnswer) {
-      if (answer.trim().toLowerCase() !== gift.revealAnswer.trim().toLowerCase()) {
-        setGateError("That's not quite it — try again!");
+    setOpening(true);
+    setGateError("");
+    try {
+      const token = await getFirebaseAuth().currentUser?.getIdToken();
+      const response = await fetch(`/api/gifts/${encodeURIComponent(slug)}/open`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ answer }),
+      });
+      const payload = await response.json().catch(() => ({})) as { error?: string; gift?: GiftView };
+      if (!response.ok) {
+        setOpening(false);
+        setGateError(payload.error ?? "This gift could not be opened.");
         return;
       }
-    }
-    setOpening(true);
-    burst();
-    if (navigator.vibrate) navigator.vibrate([10, 40, 20]);
-    await repo.markOpened(slug);
-    setTimeout(() => {
+      if (payload.gift) setGift(payload.gift);
+      burst();
+      if (navigator.vibrate) navigator.vibrate([10, 40, 20]);
+      setTimeout(() => {
+        setOpening(false);
+        setStage("message");
+      }, 950);
+    } catch {
       setOpening(false);
-      setStage("message");
-    }, 950);
+      setGateError("This gift could not be opened. Please check your connection and try again.");
+    }
   }, [gift, answer, slug]);
 
-  // ---- Loading / not found / expired ----
-  if (gift === undefined) {
+  // ---- Loading / private access / not found / expired ----
+  if (authLoading || (gift === undefined && !loadError)) {
     return (
       <Centered>
         <Loader2 className="h-7 w-7 animate-spin text-brand" />
       </Centered>
     );
   }
-  if (gift === null) {
+  if (loadError) {
+    return (
+      <Centered>
+        <div className="max-w-sm text-center">
+          <Lock className="mx-auto h-9 w-9 text-brand" />
+          <h1 className="mt-4 font-display text-2xl font-semibold">{user ? "Private gift unavailable" : "Recipient sign-in required"}</h1>
+          <p className="mt-2 text-sm text-muted">{user ? "This account does not match the intended recipient." : "Sign in with the recipient’s email or phone number to open this private gift."}</p>
+          {user
+            ? <Link href="/dashboard" className="mt-5 inline-block text-brand underline">Go to dashboard</Link>
+            : <Link href={`/login?next=/gift/${slug}`} className="mt-5 inline-block rounded-full bg-brand px-6 py-3 font-medium text-white">Sign in to open</Link>}
+        </div>
+      </Centered>
+    );
+  }
+  if (!gift) {
     return (
       <Centered>
         <div className="text-center">
@@ -306,30 +341,21 @@ function AmountReveal({ value, currency }: { value: number; currency: Gift["curr
   );
 }
 
-function ClaimForm({ gift, onClaimed }: { gift: Gift; onClaimed: (g: Gift) => void }) {
-  const [contact, setContact] = useState(gift.recipientPhone || gift.recipientEmail || "");
-  const [step, setStep] = useState<"contact" | "otp" | "loading">("contact");
-  const [otp, setOtp] = useState("");
+function ClaimForm({ gift, onClaimed }: { gift: Gift | GiftView; onClaimed: (g: Gift) => void }) {
+  const { user, loading: authLoading } = useAuth();
+  const [claiming, setClaiming] = useState(false);
   const [error, setError] = useState("");
 
-  const sendOtp = () => {
-    if (!contact.trim()) return setError("Enter your phone number or email.");
+  const claim = async () => {
     setError("");
-    setStep("otp");
-  };
-
-  const verify = async () => {
-    // OTP is a placeholder — any 4+ digits pass in demo mode.
-    if (otp.replace(/\D/g, "").length < 4) return setError("Enter the 4-digit code (any digits in demo).");
-    setError("");
-    setStep("loading");
+    setClaiming(true);
     try {
       const claimed = await repo.claimGift(gift.slug, repo.currentUserId());
       burst();
       onClaimed(claimed);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not claim gift.");
-      setStep("otp");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not claim gift.");
+      setClaiming(false);
     }
   };
 
@@ -346,37 +372,19 @@ function ClaimForm({ gift, onClaimed }: { gift: Gift; onClaimed: (g: Gift) => vo
           <p className="text-sm font-medium">Claim your {formatMoney(gift.amount, gift.currency)}</p>
         </div>
 
-        {step === "contact" && (
+        {authLoading ? (
+          <div className="grid place-items-center py-8"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>
+        ) : !user ? (
           <div className="mt-4 space-y-3">
-            <label className="block text-sm text-muted">Phone number or email</label>
-            <input
-              value={contact}
-              onChange={(e) => setContact(e.target.value)}
-              placeholder="e.g. 0803 000 0000"
-              className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand"
-            />
-            <Button onClick={sendOtp} size="lg" className="w-full">Continue</Button>
+            <p className="text-sm text-muted">Sign in with the recipient&apos;s verified email or phone number to claim this GiftCash.</p>
+            <Link href={`/login?next=/gift/${gift.slug}`} className="block rounded-full bg-brand px-5 py-3 text-center font-medium text-white">Sign in to claim</Link>
           </div>
-        )}
-
-        {step === "otp" && (
+        ) : claiming ? (
+          <div className="grid place-items-center py-8"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>
+        ) : (
           <div className="mt-4 space-y-3">
-            <p className="text-sm text-muted">We sent a verification code to <b>{contact}</b>. Enter it below.</p>
-            <input
-              value={otp}
-              onChange={(e) => setOtp(e.target.value)}
-              inputMode="numeric"
-              placeholder="1234"
-              className="w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-brand"
-            />
-            <Button onClick={verify} size="lg" className="w-full">Verify &amp; claim</Button>
-            <p className="text-center text-xs text-muted">Demo mode — any 4 digits work.</p>
-          </div>
-        )}
-
-        {step === "loading" && (
-          <div className="grid place-items-center py-8">
-            <Loader2 className="h-7 w-7 animate-spin text-brand" />
+            <p className="text-sm text-muted">You&apos;re signed in. We&apos;ll verify this account against the intended recipient before crediting the wallet.</p>
+            <Button onClick={claim} size="lg" className="w-full">Verify account &amp; claim</Button>
           </div>
         )}
 
@@ -386,7 +394,7 @@ function ClaimForm({ gift, onClaimed }: { gift: Gift; onClaimed: (g: Gift) => vo
   );
 }
 
-function Claimed({ gift, slug, senderLabel }: { gift: Gift; slug: string; senderLabel: string }) {
+function Claimed({ gift, slug, senderLabel }: { gift: Gift | GiftView; slug: string; senderLabel: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.94 }}

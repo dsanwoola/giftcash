@@ -156,7 +156,10 @@ export interface Gift {
   scheduledAt?: string; // ISO — unlock time
   revealGate: RevealGate;
   revealQuestion?: string;
+  /** Legacy plaintext answer; never include in public responses. */
   revealAnswer?: string;
+  /** Server-only digest used for new question-gated gifts. */
+  revealAnswerHash?: string;
   mystery: boolean; // hide amount until opened
   privateGift: boolean;
 
@@ -184,6 +187,24 @@ export interface GiftAddOns {
   scheduledSurprise: boolean;
   videoMessage: boolean;
 }
+
+export type PublicGift = Omit<Gift,
+  | "senderId"
+  | "recipientPhone"
+  | "recipientEmail"
+  | "serviceFee"
+  | "delivery"
+  | "paymentStatus"
+  | "revealAnswer"
+  | "revealAnswerHash"
+  | "paymentReference"
+  | "paymentProvider"
+  | "providerTransactionId"
+  | "claimedByUserId"
+  | "fundedAt"
+> & { viewerRole: "public" };
+
+export type GiftView = PublicGift | (Gift & { viewerRole: "sender" });
 
 export interface ThankYou {
   message?: string;
@@ -270,6 +291,30 @@ export interface GroupGift {
   status: GroupGiftStatus;
   createdAt: string;
 }
+
+export type PublicContribution = Pick<Contribution,
+  "id" | "name" | "anonymous" | "amount" | "message" | "createdAt"
+>;
+
+export interface PublicGroupGift {
+  viewerRole: "public";
+  id: string;
+  slug: string;
+  organizerName: string;
+  occasion: OccasionId;
+  theme: ThemeId;
+  recipientName: string;
+  title: string;
+  story?: string;
+  targetAmount: number;
+  currency: CurrencyCode;
+  deadline: string;
+  contributions: PublicContribution[];
+  status: GroupGiftStatus;
+  createdAt: string;
+}
+
+export type GroupGiftView = PublicGroupGift | (GroupGift & { viewerRole: "organizer" });
 
 /* ----- Occasion event commerce (tickets, RSVP, seating, check-in) ----- */
 export type EventType = OccasionId | "concert" | "dinner" | "conference" | "fundraiser" | "party";
@@ -377,6 +422,33 @@ export interface GiftEvent {
   contributions: Contribution[];
   createdAt: string;
 }
+
+/** Explicit, allowlisted Gift Party view safe for unauthenticated visitors. */
+export interface PublicGiftParty {
+  viewerRole: "public";
+  slug: string;
+  type: EventType;
+  title: string;
+  celebrants: string;
+  date: string;
+  gradient: [string, string];
+  currency: CurrencyCode;
+  showTotal: boolean;
+  campaignMode?: boolean;
+  maxContribution?: number;
+  isPublic: true;
+  contributionCount: number;
+  /** Present only when the organizer has enabled public totals. */
+  contributionTotal?: number;
+}
+
+export type OrganizerGiftParty = GiftEvent & {
+  viewerRole: "organizer";
+  contributionCount: number;
+  contributionTotal: number;
+};
+
+export type GiftPartyView = PublicGiftParty | OrganizerGiftParty;
 
 /* ----- Gift Party Moments Album ----- */
 export type AlbumPhase = "pre" | "post";

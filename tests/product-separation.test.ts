@@ -40,7 +40,8 @@ test("Gift Party is canonical for public and payment-return routes", () => {
 
 test("organizer-only event sections stay hidden from invitees and gifters", () => {
   const party = read("src/components/event/event-page.tsx");
-  assert.match(party, /user\?\.uid === party\.organizerId/);
+  assert.match(party, /party\.viewerRole === "organizer"/);
+  assert.doesNotMatch(party, /user\?\.uid === party\.organizerId/);
   assert.match(party, /isOrganizer && \(/);
   assert.match(party, /isOrganizer && <SetupGuide/);
 });
@@ -52,8 +53,9 @@ test("public GiftCash surfaces use GiftCash branding", () => {
   assert.match(read("src/components/ui/logo.tsx"), /Cash/);
 });
 
-test("public readiness payload hides legacy event-access fee fields", () => {
+test("launch readiness payload is admin-only", () => {
   const launch = read("src/app/api/launch/route.ts");
+  assert.match(launch, /requireAdmin\(req\)/);
   assert.doesNotMatch(launch, /plans: REVENUE_PLANS,/);
   assert.match(launch, /giftPartySetupFee/);
 });
