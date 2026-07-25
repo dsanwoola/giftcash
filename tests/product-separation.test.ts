@@ -43,3 +43,9 @@ test("public GiftCash surfaces use GiftCash branding", () => {
   assert.match(read("src/components/ui/logo.tsx"), /Gift/);
   assert.match(read("src/components/ui/logo.tsx"), /Cash/);
 });
+
+test("public readiness payload hides legacy event-access fee fields", () => {
+  const launch = read("src/app/api/launch/route.ts");
+  assert.doesNotMatch(launch, /plans: REVENUE_PLANS,/);
+  assert.match(launch, /giftPartySetupFee/);
+});
