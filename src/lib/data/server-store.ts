@@ -10,6 +10,7 @@ import type {
   Contribution,
   GiftEvent,
   Gift,
+  GroupGift,
   LedgerDirection,
   LedgerEntry,
   LedgerType,
@@ -26,9 +27,6 @@ import { buildSeed } from "./seed";
  * append-only ledger and to gift claim/status transitions. Invoked from API
  * route handlers after verifying the caller's Firebase ID token.
  */
-
-const slugify = (name: string) =>
-  `${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "gift"}-${nanoid(6)}`;
 
 /* ---------- Auth guards ---------- */
 
@@ -89,6 +87,7 @@ function walletFromLedger(userId: string, entries: LedgerEntry[]): Wallet {
   let pending = 0;
   for (const e of entries) {
     if (e.status === "reversed") continue;
+    if (e.transactionType === "gift_funded" && e.metadata?.source === "external_checkout") continue;
     if (e.status === "settled") {
       available += e.direction === "credit" ? e.amount : -e.amount;
       continue;
@@ -141,15 +140,28 @@ function validateBankAccount(bank: BankAccount): BankAccount {
 
 /* ---------- Gift operations ---------- */
 
-export async function fundGift(senderUid: string, input: CreateGiftInput): Promise<Gift> {
+export function validateGiftInput(input: CreateGiftInput) {
   validateMinorAmount(input.amount, "Gift amount");
   const recipientName = cleanText(input.recipientName, "Recipient name");
   const senderName = cleanText(input.senderName, "Sender name");
   const message = cleanText(input.message, "Gift message", 1, 500);
-  const fee = serviceFee(input.amount);
+  return { recipientName, senderName, message, fee: serviceFee(input.amount) };
+}
+
+/** Legacy direct funding is intentionally closed; only verified provider callbacks create gifts. */
+export async function fundGift(): Promise<never> {
+  throw new HttpError(409, "Direct gift funding is disabled. Start a verified payment checkout.");
+}
+
+export async function createVerifiedGift(
+  senderUid: string,
+  input: CreateGiftInput,
+  payment: { reference: string; provider: "flutterwave"; slug: string },
+): Promise<Gift> {
+  const { recipientName, senderName, message, fee } = validateGiftInput(input);
   const gift: Gift = {
     id: nanoid(),
-    slug: slugify(recipientName),
+    slug: payment.slug,
     senderId: senderUid,
     senderName,
     anonymous: input.anonymous,
@@ -172,22 +184,31 @@ export async function fundGift(senderUid: string, input: CreateGiftInput): Promi
     revealAnswer: input.revealAnswer,
     mystery: input.mystery,
     privateGift: input.privateGift,
-    // TODO: gate on a verified payment (provider webhook) before funding.
     status: "delivered",
     paymentStatus: "successful",
     claimStatus: "pending",
+    paymentReference: payment.reference,
+    paymentProvider: payment.provider,
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
   };
   const db = adminDb();
-  const batch = db.batch();
-  batch.set(db.collection("gifts").doc(gift.slug), gift);
-  const fund = ledgerEntry(senderUid, "gift_funded", gift.amount + fee, "debit", gift.slug, gift.currency, {
-    recipient: gift.recipientName,
+  const giftRef = db.collection("gifts").doc(gift.slug);
+  const ledgerRef = db.collection("ledger_entries").doc(`gift-funded-${payment.reference}`);
+  return db.runTransaction(async (tx) => {
+    const existing = await tx.get(giftRef);
+    if (existing.exists) return existing.data() as Gift;
+    tx.set(giftRef, gift);
+    tx.set(ledgerRef, {
+      ...ledgerEntry(senderUid, "gift_funded", gift.amount + fee, "debit", payment.reference, gift.currency, {
+        recipient: gift.recipientName,
+        provider: payment.provider,
+        source: "external_checkout",
+      }),
+      id: ledgerRef.id,
+    });
+    return gift;
   });
-  batch.set(db.collection("ledger_entries").doc(fund.id), fund);
-  await batch.commit();
-  return gift;
 }
 
 export async function openGift(slug: string): Promise<void> {
@@ -298,11 +319,42 @@ export async function appendVerifiedEventContribution(slug: string, data: Contri
   });
 }
 
-export async function contributeToEvent(slug: string, data: ContributionData): Promise<GiftEvent> {
-  return appendVerifiedEventContribution(slug, data, {
-    paymentReference: `manual-${nanoid(12)}`,
-    settlementStatus: "pending",
+export async function appendVerifiedGroupContribution(slug: string, data: ContributionData, meta: VerifiedContributionMeta): Promise<GroupGift> {
+  if (!Number.isInteger(data.amount) || data.amount < 100_00) {
+    throw new HttpError(400, "Contribution must be at least ₦100.");
+  }
+  const db = adminDb();
+  const ref = db.collection("groupGifts").doc(slug);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const group = snap.data() as GroupGift | undefined;
+    if (!group) throw new HttpError(404, "Group gift not found");
+    if (group.status !== "open") throw new HttpError(409, "This group gift is closed.");
+    if (new Date(group.deadline).getTime() < Date.now()) throw new HttpError(409, "This group gift has ended.");
+    const current = group.contributions ?? [];
+    if (current.some((item) => item.paymentReference === meta.paymentReference)) return group;
+    const contribution: Contribution = {
+      id: nanoid(),
+      name: data.anonymous ? "Anonymous" : cleanText(data.name, "Contributor name"),
+      anonymous: Boolean(data.anonymous),
+      amount: data.amount,
+      platformFee: serviceFee(data.amount),
+      netAmount: data.amount,
+      paymentReference: meta.paymentReference,
+      settlementStatus: meta.settlementStatus ?? "pending",
+      createdAt: new Date().toISOString(),
+    };
+    if (data.message?.trim()) contribution.message = data.message.trim().slice(0, 500);
+    const contributions = [contribution, ...current];
+    tx.update(ref, { contributions });
+    return { ...group, contributions };
   });
+}
+
+export async function contributeToEvent(slug: string, data: ContributionData): Promise<GiftEvent> {
+  void slug;
+  void data;
+  throw new HttpError(409, "Direct contributions are disabled. Start a verified payment checkout.");
 }
 
 /* ---------- Withdrawal operations ---------- */

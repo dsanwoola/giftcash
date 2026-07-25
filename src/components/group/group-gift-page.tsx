@@ -35,8 +35,15 @@ export function GroupGiftPage({ slug }: { slug: string }) {
   const pct = Math.min(100, Math.round((raised / group.targetAmount) * 100));
   const daysLeft = Math.max(0, Math.ceil((+new Date(group.deadline) - Date.now()) / 86_400_000));
 
-  const contribute = async (c: ContributionInput) => {
-    await repo.contributeToGroup(slug, c);
+  const startFlutterwaveCheckout = async (contribution: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
+    const response = await fetch(`/api/groups/${slug}/payments/flutterwave/initialize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(contribution),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error ?? "Could not start Flutterwave checkout.");
+    return payload as { authorizationUrl: string; reference: string };
   };
 
   const share = async () => {
@@ -92,7 +99,14 @@ export function GroupGiftPage({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <ContributeSheet open={sheet} onClose={() => setSheet(false)} onContribute={contribute} currency={group.currency} ctaLabel={`Contribute to ${group.recipientName}'s gift`} />
+      <ContributeSheet
+        open={sheet}
+        onClose={() => setSheet(false)}
+        onContribute={async () => { throw new Error("Verified checkout is required."); }}
+        onStartCheckout={startFlutterwaveCheckout}
+        currency={group.currency}
+        ctaLabel={`Contribute to ${group.recipientName}'s gift`}
+      />
     </div>
   );
 }

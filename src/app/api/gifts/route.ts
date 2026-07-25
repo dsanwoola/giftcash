@@ -1,16 +1,13 @@
-import { NextResponse } from "next/server";
-import { fundGift, requireUid } from "@/lib/data/server-store";
+import { requireUid, HttpError } from "@/lib/data/server-store";
 import { fail } from "@/lib/api/handle";
-import type { CreateGiftInput } from "@/lib/data/repo-types";
 
-// POST /api/gifts — create + fund a gift (server-authoritative ledger write).
+// Legacy endpoint retained for old clients, but direct funding is permanently blocked.
+// New clients must initialize Flutterwave at /api/gifts/payments/flutterwave/initialize.
 export async function POST(req: Request) {
   try {
-    const uid = await requireUid(req);
-    const input = (await req.json()) as CreateGiftInput;
-    const gift = await fundGift(uid, input);
-    return NextResponse.json(gift);
-  } catch (e) {
-    return fail(e);
+    await requireUid(req);
+    throw new HttpError(409, "Direct gift funding is disabled. Start a verified Flutterwave checkout.");
+  } catch (error) {
+    return fail(error);
   }
 }

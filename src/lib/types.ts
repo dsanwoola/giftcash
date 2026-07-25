@@ -163,6 +163,9 @@ export interface Gift {
   status: GiftStatus;
   paymentStatus: PaymentStatus;
   claimStatus: ClaimStatus;
+  /** Provider reference that funded the gift; present only after server verification. */
+  paymentReference?: string;
+  paymentProvider?: "flutterwave";
 
   createdAt: string;
   expiresAt: string; // default +30 days
@@ -234,7 +237,7 @@ export interface Contribution {
   /** Event-scoped opaque identity used for aggregation; never an email/phone. */
   contributorKey?: string;
   amount: number; // minor units
-  platformFee?: number; // Occasion revenue share in minor units
+  platformFee?: number; // GiftCash revenue share in minor units
   netAmount?: number; // amount due to organizer/recipient after platform fee
   message?: string;
   table?: string; // optional table/seat tag (from a table QR code)

@@ -138,6 +138,8 @@ export const firestoreRepo: GiftRepo = {
     let pending = 0;
     for (const e of ledger) {
       if (e.status === "reversed") continue;
+      // External processor-funded gifts are audit entries, not wallet debits.
+      if (e.transactionType === "gift_funded" && e.metadata?.source === "external_checkout") continue;
       if (e.status === "settled") {
         available += e.direction === "credit" ? e.amount : -e.amount;
       } else if (e.status === "pending") {
@@ -166,7 +168,7 @@ export const firestoreRepo: GiftRepo = {
     return w.sort(byCreatedDesc);
   },
 
-  /* ---------- Group gifting (client writes; no ledger) ---------- */
+  /* ---------- Group gifting ---------- */
 
   async getGroupGift(slug) {
     const d = await getDoc(doc(getDb(), COL.groupGifts, slug));
@@ -216,7 +218,7 @@ export const firestoreRepo: GiftRepo = {
     return updated;
   },
 
-  /* ---------- Event gifting (client writes; no ledger) ---------- */
+  /* ---------- Gift Party gifting ---------- */
 
   async getEvent(slug) {
     const d = await getDoc(doc(getDb(), COL.events, slug));

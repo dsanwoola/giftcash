@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { confirmFlutterwaveEventPayment } from "@/lib/payments/flutterwave-event-payments";
+import { confirmFlutterwavePayment } from "@/lib/payments/flutterwave-product-payments";
 import { verifyFlutterwaveSignature } from "@/lib/payments/flutterwave";
 
 interface FlutterwaveWebhookPayload {
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   const transactionId = payload.data?.id;
 
   if ((eventName === "charge.completed" || eventName === "charge.successful" || eventName === "charge.success") && reference) {
-    await confirmFlutterwaveEventPayment(reference, { transactionId });
+    await confirmFlutterwavePayment(reference, { transactionId });
   }
 
   return NextResponse.json({ received: true });

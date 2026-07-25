@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Download, Gift, HelpCircle, Loader2, Lock, MonitorPlay, ShieldCheck } from "lucide-react";
+import { Download, HelpCircle, Loader2, Lock, MonitorPlay, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -14,9 +14,6 @@ import { contributionsToCsv, downloadCsv } from "@/lib/csv";
 import { SOUND_THEMES, playGiftSound, unlockAudio } from "@/lib/sound";
 import type { GiftEvent } from "@/lib/types";
 
-const TEST_NAMES = ["Aunty Ngozi", "Chidi", "The Okafors", "Bisi & Tunde", "Uncle Sam", "Kemi", "Emeka", "Fatima"];
-const TEST_AMOUNTS = [5000, 10000, 20000, 25000, 50000];
-const rand = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 
 export function HostConsole({ slug }: { slug: string }) {
   const { user, loading: authLoading } = useAuth();
@@ -77,10 +74,6 @@ export function HostConsole({ slug }: { slug: string }) {
     setGoalEditing(false);
   };
 
-  const simulate = () => repo.contributeToEvent(slug, {
-    name: rand(TEST_NAMES), anonymous: false, amount: toMinor(rand(TEST_AMOUNTS)),
-
-  });
 
   return (
     <div className="min-h-dvh bg-cream">
@@ -142,7 +135,6 @@ export function HostConsole({ slug }: { slug: string }) {
             )}
           </div>
 
-          <Button variant="outline" className="w-full" onClick={simulate}><Gift className="h-4 w-4" /> Send a test gift</Button>
 
           <button
             onClick={() => downloadCsv(`${slug}-donors.csv`, contributionsToCsv(event.contributions, event.currency))}

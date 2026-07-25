@@ -1,28 +1,25 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
-  Copy,
-  Eye,
   Loader2,
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { useAuth } from "@/lib/auth/auth-context";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { OCCASIONS, THEMES, occasionById, themeById } from "@/lib/occasions";
 import { CURRENCIES, formatMoney, serviceFee, toMinor } from "@/lib/money";
 import { TONES, suggestMessage, type MessageTone } from "@/lib/ai-messages";
-import { repo } from "@/lib/data/repo";
 import type {
   CurrencyCode,
   DeliveryMethod,
-  Gift,
   OccasionId,
   RevealGate,
   ThemeId,
@@ -51,6 +48,8 @@ interface Form {
   privateGift: boolean;
   anonymous: boolean;
   senderName: string;
+  senderEmail: string;
+  senderPhone: string;
 }
 
 const STEPS = [
@@ -61,15 +60,15 @@ const STEPS = [
   "Message",
   "Delivery",
   "Payment",
-  "Done",
 ];
 
 const QUICK_AMOUNTS = [5000, 10000, 25000, 50000, 100000];
 
 export function CreateGiftWizard() {
+  const { user, loading: authLoading } = useAuth();
   const [step, setStep] = useState(0);
   const [paying, setPaying] = useState(false);
-  const [created, setCreated] = useState<Gift | null>(null);
+  const [paymentError, setPaymentError] = useState("");
   const [form, setForm] = useState<Form>({
     occasion: "birthday",
     theme: "birthday_cake",
@@ -92,8 +91,20 @@ export function CreateGiftWizard() {
     mystery: true,
     privateGift: false,
     anonymous: false,
-    senderName: "Demo Sender",
+    senderName: "",
+    senderEmail: "",
+    senderPhone: "",
   });
+
+  useEffect(() => {
+    if (!user) return;
+    setForm((current) => ({
+      ...current,
+      senderName: current.senderName || user.displayName || "GiftCash sender",
+      senderEmail: current.senderEmail || user.email || "",
+      senderPhone: current.senderPhone || user.phoneNumber || "",
+    }));
+  }, [user]);
 
   const set = <K extends keyof Form>(key: K, value: Form[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -119,39 +130,62 @@ export function CreateGiftWizard() {
   const back = () => setStep((s) => Math.max(0, s - 1));
 
   const pay = async () => {
+    if (!form.senderName.trim()) return setPaymentError("Add your sender name.");
+    if (!/^\S+@\S+\.\S+$/.test(form.senderEmail.trim())) return setPaymentError("Add a valid email for your payment receipt.");
+    if (!form.senderPhone.replace(/\D/g, "")) return setPaymentError("Add your phone number for Flutterwave checkout.");
+    setPaymentError("");
     setPaying(true);
-    // Simulated payment success (provider abstraction lives in lib/types).
-    await new Promise((r) => setTimeout(r, 1100));
-    const gift = await repo.createGift({
-      occasion: form.occasion,
-      theme: form.theme,
-      recipientName: form.recipientName.trim(),
-      recipientNickname: form.recipientNickname.trim() || undefined,
-      recipientPhone: form.recipientPhone.trim() || undefined,
-      recipientEmail: form.recipientEmail.trim() || undefined,
-      amount: amountMinor,
-      currency: form.currency,
-      message: form.message.trim(),
-      delivery: form.delivery,
-      scheduledAt: form.schedule && form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
-      revealGate: form.revealGate,
-      revealQuestion: form.revealQuestion.trim() || undefined,
-      revealAnswer: form.revealAnswer.trim() || undefined,
-      mystery: form.mystery,
-      privateGift: form.privateGift,
-      anonymous: form.anonymous,
-      addOns: {
-        premiumAnimation: form.premiumAnimation,
-        printedCard: form.printedCard,
-        scheduledSurprise: form.schedule,
-        videoMessage: form.videoMessage,
-      },
-      senderName: form.senderName,
-    });
-    setPaying(false);
-    setCreated(gift);
-    setStep(STEPS.length - 1);
+    try {
+      const token = await getFirebaseAuth().currentUser?.getIdToken();
+      if (!token) throw new Error("Your session expired. Sign in again.");
+      const gift = {
+        occasion: form.occasion,
+        theme: form.theme,
+        recipientName: form.recipientName.trim(),
+        recipientNickname: form.recipientNickname.trim() || undefined,
+        recipientPhone: form.recipientPhone.trim() || undefined,
+        recipientEmail: form.recipientEmail.trim() || undefined,
+        amount: amountMinor,
+        currency: form.currency,
+        message: form.message.trim(),
+        delivery: form.delivery,
+        scheduledAt: form.schedule && form.scheduledAt ? new Date(form.scheduledAt).toISOString() : undefined,
+        revealGate: form.revealGate,
+        revealQuestion: form.revealQuestion.trim() || undefined,
+        revealAnswer: form.revealAnswer.trim() || undefined,
+        mystery: form.mystery,
+        privateGift: form.privateGift,
+        anonymous: form.anonymous,
+        addOns: {
+          premiumAnimation: form.premiumAnimation,
+          printedCard: form.printedCard,
+          scheduledSurprise: form.schedule,
+          videoMessage: form.videoMessage,
+        },
+        senderName: form.senderName.trim(),
+      };
+      const response = await fetch("/api/gifts/payments/flutterwave/initialize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ gift, email: form.senderEmail.trim(), phone: form.senderPhone.trim() }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || "Could not start Flutterwave checkout.");
+      window.location.assign(payload.authorizationUrl);
+    } catch (error) {
+      setPaymentError(error instanceof Error ? error.message : "Could not start payment.");
+      setPaying(false);
+    }
   };
+
+  if (authLoading) return <div className="grid min-h-dvh place-items-center bg-cream"><Loader2 className="h-7 w-7 animate-spin text-brand" /></div>;
+  if (!user) {
+    return (
+      <AuthShell title="Sign in to send GiftCash" subtitle="Your verified payment and gift link will be protected by your account." footer={<>New here? <Link href="/register" className="font-medium text-brand">Create an account</Link></>}>
+        <ButtonLink href="/login?next=/gift/create" size="lg" className="w-full">Sign in to continue</ButtonLink>
+      </AuthShell>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-cream">
@@ -162,20 +196,18 @@ export function CreateGiftWizard() {
         </div>
 
         {/* Progress */}
-        {!created && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between text-xs text-muted">
-              <span>{STEPS[step]}</span>
-              <span>Step {step + 1} of {STEPS.length - 1}</span>
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10">
-              <motion.div
-                className="h-full rounded-full bg-brand"
-                animate={{ width: `${(step / (STEPS.length - 2)) * 100}%` }}
-              />
-            </div>
+        <div className="mt-6">
+          <div className="flex items-center justify-between text-xs text-muted">
+            <span>{STEPS[step]}</span>
+            <span>Step {step + 1} of {STEPS.length}</span>
           </div>
-        )}
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10">
+            <motion.div
+              className="h-full rounded-full bg-brand"
+              animate={{ width: `${(step / (STEPS.length - 1)) * 100}%` }}
+            />
+          </div>
+        </div>
 
         <div className="mt-7">
           <AnimatePresence mode="wait">
@@ -336,24 +368,26 @@ export function CreateGiftWizard() {
                       <Row label="Total" value={formatMoney(amountMinor + fee, form.currency)} bold />
                     </div>
                   </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <Field label="Sender name *"><input className={inputCls} value={form.senderName} onChange={(e) => set("senderName", e.target.value)} /></Field>
+                    <Field label="Email for receipt *"><input type="email" className={inputCls} value={form.senderEmail} onChange={(e) => set("senderEmail", e.target.value)} placeholder="you@example.com" /></Field>
+                  </div>
+                  <Field label="Phone number for checkout *"><input inputMode="tel" className={inputCls} value={form.senderPhone} onChange={(e) => set("senderPhone", e.target.value)} placeholder="0803…" /></Field>
+                  {paymentError && <p className="text-sm text-pink">{paymentError}</p>}
                   <Button onClick={pay} size="lg" variant="primary" className="w-full" disabled={paying}>
                     {paying ? <Loader2 className="h-5 w-5 animate-spin" /> : null}
                     {paying ? "Processing payment…" : `Pay ${formatMoney(amountMinor + fee, form.currency)}`}
                   </Button>
-                  <p className="text-center text-xs text-muted">Demo payment — no real charge. Provider integration is abstracted in code.</p>
+                  <p className="text-center text-xs text-muted">You’ll continue to Flutterwave. GiftCash creates the gift only after server-side payment verification.</p>
                 </Section>
               )}
 
-              {/* STEP 7 — Confirmation */}
-              {step === 7 && created && (
-                <Confirmation gift={created} />
-              )}
             </motion.div>
           </AnimatePresence>
         </div>
 
         {/* Nav */}
-        {!created && step < 6 && (
+        {step < 6 && (
           <div className="fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-xl items-center justify-between gap-3 border-t border-ink/5 bg-cream/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:mt-8 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
             {step === 0 ? (
               <ButtonLink href="/" variant="ghost" className="flex-1 sm:flex-none">
@@ -369,7 +403,7 @@ export function CreateGiftWizard() {
             </Button>
           </div>
         )}
-        {!created && step === 6 && (
+        {step === 6 && (
           <div className="mt-6">
             <Button variant="ghost" onClick={back}><ArrowLeft className="h-4 w-4" /> Back</Button>
           </div>
@@ -416,50 +450,6 @@ function MessageStep({ form, set }: { form: Form; set: <K extends keyof Form>(k:
         </div>
       </div>
     </Section>
-  );
-}
-
-/* ---------------- Confirmation ---------------- */
-function Confirmation({ gift }: { gift: Gift }) {
-  const [copied, setCopied] = useState(false);
-  const url = typeof window !== "undefined" ? `${window.location.origin}/gift/${gift.slug}` : `/gift/${gift.slug}`;
-  const waText = encodeURIComponent(`🎁 ${gift.recipientName}, I sent you a Gift Cash! Open it here: ${url}`);
-
-  const copy = async () => {
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
-  };
-
-  return (
-    <div className="text-center">
-      <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald text-white shadow-lift">
-        <Check className="h-8 w-8" />
-      </div>
-      <h1 className="mt-4 font-display text-2xl font-semibold">Your gift is ready! 🎉</h1>
-      <p className="mt-1 text-muted">Share the link below — they&apos;ll open a moment, not a transfer.</p>
-
-      <div className="mx-auto mt-6 w-fit rounded-3xl border border-ink/5 bg-white p-5 shadow-soft">
-        <QRCodeSVG value={url} size={160} fgColor="#1b1226" bgColor="#ffffff" />
-      </div>
-
-      <div className="mt-5 grid gap-2 rounded-2xl border border-ink/10 bg-white p-2 sm:flex sm:items-center sm:pl-4">
-        <span className="flex-1 truncate text-left text-sm text-muted">{url}</span>
-        <Button size="sm" variant="outline" onClick={copy} className="w-full sm:w-auto">
-          <Copy className="h-4 w-4" /> {copied ? "Copied" : "Copy"}
-        </Button>
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <a href={`https://wa.me/?text=${waText}`} target="_blank" rel="noopener noreferrer">
-          <Button variant="primary" className="w-full">Share to WhatsApp</Button>
-        </a>
-        <Link href={`/gift/${gift.slug}`}>
-          <Button variant="gold" className="w-full"><Eye className="h-4 w-4" /> Preview</Button>
-        </Link>
-      </div>
-      <Link href="/dashboard" className="mt-6 inline-block text-sm text-brand underline">Go to dashboard</Link>
-    </div>
   );
 }
 
