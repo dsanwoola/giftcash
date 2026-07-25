@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Gift, Banknote, Users, ShieldCheck, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, Gift, Banknote, Users, ShieldCheck, AlertTriangle, CalendarDays } from "lucide-react";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/utils";
 
 const nav = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
   { href: "/admin/gifts", label: "Gifts", icon: Gift },
+  { href: "/admin/events", label: "Events", icon: CalendarDays },
   { href: "/admin/withdrawals", label: "Withdrawals", icon: Banknote },
   { href: "/admin/bank-alerts", label: "Bank alerts", icon: AlertTriangle },
   { href: "/admin/users", label: "Users", icon: Users },

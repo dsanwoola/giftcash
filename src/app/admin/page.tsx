@@ -42,6 +42,11 @@ export default function AdminOverview() {
       </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
+        <Link href="/admin/events" className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
+          <p className="text-2xl">📅</p>
+          <p className="mt-2 font-medium">Ongoing & scheduled events</p>
+          <p className="text-xs text-cream/60">Monitor every Gift Party across the platform</p>
+        </Link>
         <Link href="/admin/withdrawals" className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:bg-white/[0.06]">
           <p className="text-2xl">🏦</p>
           <p className="mt-2 font-medium">Review withdrawals</p>

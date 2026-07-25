@@ -70,7 +70,7 @@ function uid(): string {
 }
 
 /** Send JSON to an API route with the caller's Firebase ID token attached. */
-async function authedRequest<T>(path: string, method: "POST" | "PATCH", body?: unknown): Promise<T> {
+async function authedRequest<T>(path: string, method: "GET" | "POST" | "PATCH", body?: unknown): Promise<T> {
   let token: string | undefined;
   try {
     token = await getFirebaseAuth().currentUser?.getIdToken();
@@ -107,6 +107,7 @@ async function authedRequest<T>(path: string, method: "POST" | "PATCH", body?: u
   return res.json() as Promise<T>;
 }
 
+const authedGet = <T>(path: string) => authedRequest<T>(path, "GET");
 const authedPost = <T>(path: string, body?: unknown) => authedRequest<T>(path, "POST", body);
 
 export const firestoreRepo: GiftRepo = {
@@ -224,8 +225,9 @@ export const firestoreRepo: GiftRepo = {
   },
 
   async listEvents(userId = uid()) {
-    const e = await snap<GiftEvent>(query(collection(getDb(), COL.events), where("organizerId", "==", userId)));
-    return e.sort(byCreatedDesc);
+    void userId;
+    const response = await authedGet<{ events: GiftEvent[] }>("/api/events");
+    return response.events;
   },
 
   async createEvent(input: CreateEventInput) {

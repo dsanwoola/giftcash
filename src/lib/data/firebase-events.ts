@@ -77,6 +77,13 @@ export async function listFirebaseEvents(organizerId: string, limit = 25): Promi
   return snap.docs.map((doc) => doc.data()).sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 }
 
+export async function listAllFirebaseEvents(): Promise<GiftEvent[]> {
+  const snap = await adminDb().collection<GiftEvent>("events").get();
+  return snap.docs
+    .map((doc) => doc.data())
+    .sort((a, b) => +new Date(a.startsAt ?? a.date) - +new Date(b.startsAt ?? b.date));
+}
+
 async function saveEvent(event: GiftEvent) {
   await adminDb().collection<GiftEvent>("events").doc(event.slug).set(event);
   return event;
