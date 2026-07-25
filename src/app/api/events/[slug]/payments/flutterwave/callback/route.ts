@@ -19,7 +19,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ slug: string }>
     if (status && status !== "successful" && status !== "completed") {
       throw new Error(`Flutterwave returned ${status}.`);
     }
-    await confirmFlutterwaveEventPayment(reference, { transactionId });
+    await confirmFlutterwaveEventPayment(reference, { transactionId, expectedEventSlug: slug });
     destination.searchParams.set("payment", "success");
     destination.searchParams.set("provider", "flutterwave");
     destination.searchParams.set("reference", reference);

@@ -166,6 +166,8 @@ export interface Gift {
   /** Provider reference that funded the gift; present only after server verification. */
   paymentReference?: string;
   paymentProvider?: "flutterwave";
+  providerTransactionId?: string | number;
+  fundedAt?: string;
 
   createdAt: string;
   expiresAt: string; // default +30 days
@@ -242,6 +244,8 @@ export interface Contribution {
   message?: string;
   table?: string; // optional table/seat tag (from a table QR code)
   paymentReference?: string; // provider/reference shown to the host as the alert id
+  paymentProvider?: "flutterwave";
+  providerTransactionId?: string | number;
   settlementStatus?: "pending" | "forwarded" | "failed"; // provider payout status
   settlementAccountLast4?: string; // transparency-only; never expose full account publicly
   createdAt: string;

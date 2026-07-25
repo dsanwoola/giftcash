@@ -177,7 +177,10 @@ async function verifyProductIntent(intent: ProductIntent, options?: { transactio
   if (result.amount !== intent.totalChargeAmount || result.currency !== intent.currency) {
     throw new HttpError(400, "Flutterwave payment amount/currency mismatch.");
   }
-  if (result.status !== "successful") throw new HttpError(400, "Flutterwave payment was not successful.");
+  if (result.status !== "successful") {
+    const terminal = ["failed", "cancelled", "canceled"].includes(result.status.toLowerCase());
+    throw new HttpError(terminal ? 400 : 425, terminal ? "Flutterwave payment was not successful." : "Flutterwave payment is still pending.");
+  }
   return result;
 }
 
@@ -213,35 +216,44 @@ export async function confirmFlutterwavePayment(
 
   try {
     const result = await verifyProductIntent(intent, options);
+    const providerTransactionId = result.transactionId;
+    if (providerTransactionId === undefined || providerTransactionId === null || providerTransactionId === "") {
+      throw new HttpError(400, "Flutterwave transaction ID is missing.");
+    }
+    const confirmedAt = result.paidAt ?? new Date().toISOString();
     let gift: Gift | undefined;
     if (intent.productKind === "personal_gift") {
       gift = await createVerifiedGift(intent.senderUid, intent.giftInput, {
         reference: ref,
         provider: "flutterwave",
         slug: intent.giftSlug,
+        providerTransactionId,
+        providerStatus: result.status ?? "successful",
+        providerChannel: result.channel,
+        providerMessage: result.processorResponse,
+        confirmedAt,
       });
     } else {
       await appendVerifiedGroupContribution(intent.groupSlug, intent.contribution, {
         paymentReference: ref,
         settlementStatus: "pending",
+        paymentProvider: "flutterwave",
+        providerTransactionId,
+        providerStatus: result.status ?? "successful",
+        providerChannel: result.channel,
+        providerMessage: result.processorResponse,
+        confirmedAt,
       });
     }
-    const confirmedAt = result.paidAt ?? new Date().toISOString();
-    await intentRef.update({
-      status: "confirmed",
-      providerStatus: result.status,
-      providerChannel: result.channel,
-      providerMessage: result.processorResponse,
-      providerTransactionId: result.transactionId,
-      confirmedAt,
-    });
     return { intent: { ...intent, status: "confirmed", confirmedAt }, gift };
   } catch (error) {
-    await intentRef.update({
-      status: "failed",
-      providerMessage: error instanceof Error ? error.message : "Payment verification failed",
-      failedAt: new Date().toISOString(),
-    });
+    if (!(error instanceof HttpError && error.status === 425)) {
+      await intentRef.update({
+        status: "failed",
+        providerMessage: error instanceof Error ? error.message : "Payment verification failed",
+        failedAt: new Date().toISOString(),
+      });
+    }
     throw error;
   }
 }

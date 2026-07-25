@@ -102,7 +102,6 @@ export function GroupGiftPage({ slug }: { slug: string }) {
       <ContributeSheet
         open={sheet}
         onClose={() => setSheet(false)}
-        onContribute={async () => { throw new Error("Verified checkout is required."); }}
         onStartCheckout={startFlutterwaveCheckout}
         currency={group.currency}
         ctaLabel={`Contribute to ${group.recipientName}'s gift`}

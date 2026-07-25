@@ -55,6 +55,10 @@ export class HttpError extends Error {
   }
 }
 
+function withoutUndefined(values: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+}
+
 /* ---------- Ledger helpers ---------- */
 
 function ledgerEntry(
@@ -156,7 +160,16 @@ export async function fundGift(): Promise<never> {
 export async function createVerifiedGift(
   senderUid: string,
   input: CreateGiftInput,
-  payment: { reference: string; provider: "flutterwave"; slug: string },
+  payment: {
+    reference: string;
+    provider: "flutterwave";
+    slug: string;
+    providerTransactionId: string | number;
+    providerStatus: string;
+    providerChannel?: string;
+    providerMessage?: string;
+    confirmedAt: string;
+  },
 ): Promise<Gift> {
   const { recipientName, senderName, message, fee } = validateGiftInput(input);
   const gift: Gift = {
@@ -189,25 +202,56 @@ export async function createVerifiedGift(
     claimStatus: "pending",
     paymentReference: payment.reference,
     paymentProvider: payment.provider,
+    providerTransactionId: payment.providerTransactionId,
+    fundedAt: payment.confirmedAt,
     createdAt: new Date().toISOString(),
     expiresAt: new Date(Date.now() + 30 * 86_400_000).toISOString(),
   };
   const db = adminDb();
   const giftRef = db.collection("gifts").doc(gift.slug);
   const ledgerRef = db.collection("ledger_entries").doc(`gift-funded-${payment.reference}`);
+  const intentRef = db.collection("payment_intents").doc(payment.reference);
+  const receiptRef = db.collection("provider_transactions").doc(`flutterwave-${String(payment.providerTransactionId).replace(/[^a-zA-Z0-9_-]/g, "-")}`);
   return db.runTransaction(async (tx) => {
-    const existing = await tx.get(giftRef);
-    if (existing.exists) return existing.data() as Gift;
-    tx.set(giftRef, gift);
-    tx.set(ledgerRef, {
-      ...ledgerEntry(senderUid, "gift_funded", gift.amount + fee, "debit", payment.reference, gift.currency, {
-        recipient: gift.recipientName,
+    const existingGift = await tx.get(giftRef);
+    const existingReceipt = await tx.get(receiptRef);
+    const receipt = existingReceipt.data() as { paymentReference?: string } | undefined;
+    if (receipt && receipt.paymentReference !== payment.reference) {
+      throw new HttpError(409, "This Flutterwave transaction has already funded another payment.");
+    }
+    const finalGift = existingGift.exists ? existingGift.data() as Gift : gift;
+    if (!existingGift.exists) {
+      tx.set(giftRef, gift);
+      tx.set(ledgerRef, {
+        ...ledgerEntry(senderUid, "gift_funded", gift.amount + fee, "debit", payment.reference, gift.currency, {
+          recipient: gift.recipientName,
+          provider: payment.provider,
+          source: "external_checkout",
+        }),
+        id: ledgerRef.id,
+      });
+    }
+    if (!existingReceipt.exists) {
+      tx.set(receiptRef, {
         provider: payment.provider,
-        source: "external_checkout",
-      }),
-      id: ledgerRef.id,
-    });
-    return gift;
+        providerTransactionId: payment.providerTransactionId,
+        paymentReference: payment.reference,
+        productKind: "personal_gift",
+        resultSlug: gift.slug,
+        createdAt: payment.confirmedAt,
+      });
+    }
+    tx.update(intentRef, withoutUndefined({
+      status: "confirmed",
+      providerStatus: payment.providerStatus,
+      providerChannel: payment.providerChannel,
+      providerMessage: payment.providerMessage,
+      providerTransactionId: payment.providerTransactionId,
+      confirmedAt: payment.confirmedAt,
+      resultGiftSlug: gift.slug,
+      resultGiftId: gift.id,
+    }));
+    return finalGift;
   });
 }
 
@@ -258,6 +302,15 @@ export async function saveThankYou(slug: string, thankYou: ThankYou): Promise<vo
 interface VerifiedContributionMeta {
   paymentReference: string;
   settlementStatus?: Contribution["settlementStatus"];
+}
+
+interface VerifiedFlutterwaveMeta extends VerifiedContributionMeta {
+  paymentProvider: "flutterwave";
+  providerTransactionId: string | number;
+  providerStatus: string;
+  providerChannel?: string;
+  providerMessage?: string;
+  confirmedAt: string;
 }
 
 function validateEventContribution(event: GiftEvent, data: ContributionData) {
@@ -319,21 +372,28 @@ export async function appendVerifiedEventContribution(slug: string, data: Contri
   });
 }
 
-export async function appendVerifiedGroupContribution(slug: string, data: ContributionData, meta: VerifiedContributionMeta): Promise<GroupGift> {
+export async function appendVerifiedGroupContribution(slug: string, data: ContributionData, meta: VerifiedFlutterwaveMeta): Promise<GroupGift> {
   if (!Number.isInteger(data.amount) || data.amount < 100_00) {
     throw new HttpError(400, "Contribution must be at least ₦100.");
   }
   const db = adminDb();
   const ref = db.collection("groupGifts").doc(slug);
+  const intentRef = db.collection("payment_intents").doc(meta.paymentReference);
+  const receiptRef = db.collection("provider_transactions").doc(`flutterwave-${String(meta.providerTransactionId).replace(/[^a-zA-Z0-9_-]/g, "-")}`);
   return db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
+    const existingReceipt = await tx.get(receiptRef);
     const group = snap.data() as GroupGift | undefined;
     if (!group) throw new HttpError(404, "Group gift not found");
     if (group.status !== "open") throw new HttpError(409, "This group gift is closed.");
     if (new Date(group.deadline).getTime() < Date.now()) throw new HttpError(409, "This group gift has ended.");
+    const receipt = existingReceipt.data() as { paymentReference?: string } | undefined;
+    if (receipt && receipt.paymentReference !== meta.paymentReference) {
+      throw new HttpError(409, "This Flutterwave transaction has already funded another payment.");
+    }
     const current = group.contributions ?? [];
-    if (current.some((item) => item.paymentReference === meta.paymentReference)) return group;
-    const contribution: Contribution = {
+    const existingContribution = current.find((item) => item.paymentReference === meta.paymentReference);
+    const contribution: Contribution = existingContribution ?? {
       id: nanoid(),
       name: data.anonymous ? "Anonymous" : cleanText(data.name, "Contributor name"),
       anonymous: Boolean(data.anonymous),
@@ -341,12 +401,32 @@ export async function appendVerifiedGroupContribution(slug: string, data: Contri
       platformFee: serviceFee(data.amount),
       netAmount: data.amount,
       paymentReference: meta.paymentReference,
+      paymentProvider: meta.paymentProvider,
+      providerTransactionId: meta.providerTransactionId,
       settlementStatus: meta.settlementStatus ?? "pending",
       createdAt: new Date().toISOString(),
     };
-    if (data.message?.trim()) contribution.message = data.message.trim().slice(0, 500);
-    const contributions = [contribution, ...current];
-    tx.update(ref, { contributions });
+    if (!existingContribution && data.message?.trim()) contribution.message = data.message.trim().slice(0, 500);
+    const contributions = existingContribution ? current : [contribution, ...current];
+    if (!existingContribution) tx.update(ref, { contributions });
+    if (!existingReceipt.exists) {
+      tx.set(receiptRef, {
+        provider: meta.paymentProvider,
+        providerTransactionId: meta.providerTransactionId,
+        paymentReference: meta.paymentReference,
+        productKind: "group_gift",
+        resultSlug: slug,
+        createdAt: meta.confirmedAt,
+      });
+    }
+    tx.update(intentRef, withoutUndefined({
+      status: "confirmed",
+      providerStatus: meta.providerStatus,
+      providerChannel: meta.providerChannel,
+      providerMessage: meta.providerMessage,
+      providerTransactionId: meta.providerTransactionId,
+      confirmedAt: meta.confirmedAt,
+    }));
     return { ...group, contributions };
   });
 }

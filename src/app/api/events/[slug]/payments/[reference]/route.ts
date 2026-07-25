@@ -5,14 +5,15 @@ import { adminDb } from "@/lib/firebase/admin";
 import type { BankTransferPaymentIntent } from "@/lib/payments/bank-transfer";
 import type { PaystackEventPaymentIntent } from "@/lib/payments/event-payments";
 import type { PaysureEventPaymentIntent } from "@/lib/payments/paysure-event-payments";
+import type { FlutterwaveEventPaymentIntent } from "@/lib/payments/flutterwave-event-payments";
 
 export async function GET(_req: Request, ctx: { params: Promise<{ slug: string; reference: string }> }) {
   try {
     const { slug, reference } = await ctx.params;
     const snap = await adminDb().collection("payment_intents").doc(reference.toUpperCase()).get();
-    const intent = snap.data() as (BankTransferPaymentIntent | PaystackEventPaymentIntent | PaysureEventPaymentIntent | undefined);
+    const intent = snap.data() as (BankTransferPaymentIntent | PaystackEventPaymentIntent | PaysureEventPaymentIntent | FlutterwaveEventPaymentIntent | undefined);
     if (!intent || intent.eventSlug !== slug) throw new HttpError(404, "Payment reference not found");
-    if ("provider" in intent && (intent.provider === "paystack" || intent.provider === "paysure")) {
+    if ("provider" in intent && (intent.provider === "paystack" || intent.provider === "paysure" || intent.provider === "flutterwave")) {
       return NextResponse.json({
         provider: intent.provider,
         reference: intent.reference,

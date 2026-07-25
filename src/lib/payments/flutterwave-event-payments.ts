@@ -44,7 +44,7 @@ export async function createUniqueFlutterwaveReference() {
     const existing = await db.collection("payment_intents").doc(reference).get();
     if (!existing.exists) return reference;
   }
-  return flutterwaveReference();
+  throw new HttpError(503, "Could not allocate a payment reference. Please try again.");
 }
 
 export function buildFlutterwaveIntent(event: GiftEvent, slug: string, reference: string, data: ContributionData): FlutterwaveEventPaymentIntent {
@@ -93,13 +93,16 @@ export async function addFlutterwaveCheckoutUrl(intent: FlutterwaveEventPaymentI
   return result.link;
 }
 
-export async function confirmFlutterwaveEventPayment(reference: string, options?: { transactionId?: string | number; verified?: FlutterwaveVerifyResult }) {
+export async function confirmFlutterwaveEventPayment(reference: string, options?: { transactionId?: string | number; verified?: FlutterwaveVerifyResult; expectedEventSlug?: string }) {
   const db = adminDb();
   const ref = reference.toUpperCase();
   const intentRef = db.collection("payment_intents").doc(ref);
   const snap = await intentRef.get();
   const intent = snap.data() as FlutterwaveEventPaymentIntent | undefined;
   if (!intent || intent.provider !== "flutterwave") throw new HttpError(404, "Flutterwave payment reference not found");
+  if (options?.expectedEventSlug && intent.eventSlug !== options.expectedEventSlug) {
+    throw new HttpError(400, "Flutterwave payment does not belong to this Gift Party.");
+  }
   if (intent.status === "confirmed") return intent;
 
   const result = options?.verified

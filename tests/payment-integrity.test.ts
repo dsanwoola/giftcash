@@ -44,4 +44,13 @@ test("one Flutterwave webhook dispatcher confirms every GiftCash product", () =>
   assert.match(payments, /appendVerifiedGroupContribution/);
   assert.match(payments, /createVerifiedGift/);
   assert.match(payments, /confirmFlutterwaveEventPayment/);
+  const store = read("src/lib/data/server-store.ts");
+  assert.match(store, /provider_transactions/);
+  assert.match(store, /This Flutterwave transaction has already funded another payment/);
+  assert.match(payments, /status === 425/);
+  const eventStatus = read("src/app/api/events/[slug]/payments/[reference]/route.ts");
+  assert.match(eventStatus, /FlutterwaveEventPaymentIntent/);
+  assert.match(eventStatus, /intent\.provider === "flutterwave"/);
+  assert.match(read("src/app/api/events/[slug]/payments/flutterwave/callback/route.ts"), /expectedEventSlug: slug/);
+  assert.doesNotMatch(read("src/components/social/contribute-sheet.tsx"), /demo-only fallback|onContribute/);
 });

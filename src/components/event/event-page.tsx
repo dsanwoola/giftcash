@@ -40,14 +40,6 @@ export function EventPage({ slug }: { slug: string }) {
   const date = new Date(party.date).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const url = typeof window !== "undefined" ? `${window.location.origin}/party/${slug}` : `/party/${slug}`;
 
-  const contribute = async (contribution: ContributionInput) => {
-    const response = await fetch(`/api/events/${slug}/contribute`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(contribution) });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      throw new Error(payload.error ?? "Could not add contribution.");
-    }
-    window.dispatchEvent(new Event("giftcash:change"));
-  };
 
   const startFlutterwaveCheckout = async (contribution: ContributionInput): Promise<{ authorizationUrl: string; reference: string }> => {
     const response = await fetch(`/api/events/${slug}/payments/flutterwave/initialize`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(contribution) });
@@ -92,7 +84,7 @@ export function EventPage({ slug }: { slug: string }) {
         <div className="mt-8"><h2 className="font-display text-xl font-semibold">Gift messages</h2><div className="mt-4"><ContributionWall contributions={party.contributions} currency={party.currency} showAmounts={party.showTotal} /></div></div>
       </div>
 
-      <ContributeSheet open={sheet} onClose={() => setSheet(false)} onContribute={contribute} onStartCheckout={startFlutterwaveCheckout} currency={party.currency} ctaLabel={`Gift ${party.celebrants}`} requireName={party.campaignMode} maxAmount={party.maxContribution} />
+      <ContributeSheet open={sheet} onClose={() => setSheet(false)} onStartCheckout={startFlutterwaveCheckout} currency={party.currency} ctaLabel={`Gift ${party.celebrants}`} requireName={party.campaignMode} maxAmount={party.maxContribution} />
       <SetupGuide open={setupOpen} onClose={() => setSetupOpen(false)} liveUrl={typeof window !== "undefined" ? `${window.location.origin}/party/${slug}/live` : `/party/${slug}/live`} />
       <ShareModal open={shareOpen} onClose={() => setShareOpen(false)} url={url} title={party.title} heading={`Share ${party.celebrants}’s Gift Party`} defaultMessage={shareMessage} qrLabel="Scan to send a GiftCash" calendar={{ title: party.title, details: `Celebrate ${party.celebrants} with a cash gift: ${url}`, start: party.date }} />
     </div>
