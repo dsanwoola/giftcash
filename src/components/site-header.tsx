@@ -8,10 +8,10 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Logo />
         <nav className="hidden items-center gap-7 text-sm text-muted md:flex">
+          <Link href="/#ways" className="hover:text-ink">Ways to gift</Link>
+          <Link href="/#party" className="hover:text-ink">Gift Parties</Link>
           <Link href="/#how" className="hover:text-ink">How it works</Link>
-          <Link href="/gift/create" className="hover:text-ink">Send a gift</Link>
-          <Link href="/party/create" className="hover:text-ink">Gift Party</Link>
-          <Link href="/#features" className="hover:text-ink">Features</Link>
+          <Link href="/#trust" className="hover:text-ink">Trust &amp; safety</Link>
           <Link href="/pricing" className="hover:text-ink">Pricing</Link>
 
           <Link href="/dashboard" className="hover:text-ink">Dashboard</Link>

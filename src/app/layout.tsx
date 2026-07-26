@@ -16,13 +16,13 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://giftcash.ng"),
-  title: "GiftCash — Send cash. Share joy. Celebrate together.",
+  title: "GiftCash — Make every cash gift feel personal",
   description:
-    "Send personal cash gifts, create group gifts and celebrate contributions live with GiftCash Party Mode.",
+    "Send thoughtful cash gifts, collect together for one special present, or create a beautiful Gift Party guests can join from anywhere.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "GiftCash — Cash gifting made memorable",
-    description: "Personal gifts, group gifting and live Gift Party celebrations in one secure experience.",
+    title: "GiftCash — Make every cash gift feel personal",
+    description: "Thoughtful personal gifts, group gifting and beautiful Gift Party celebrations in one secure experience.",
     url: "https://giftcash.ng",
     siteName: "GiftCash",
     type: "website",
