@@ -45,6 +45,14 @@ const giftWays = [
     href: "/party/create",
     cta: "Create a Gift Party",
   },
+  {
+    icon: HeartHandshake,
+    eyebrow: "One list of gift ideas",
+    title: "Create a Gift Registry",
+    body: "Pick the gifts you'd love and let friends fund each one — cash-backed, with no private retailer details exposed.",
+    href: "/party/create?registry=1",
+    cta: "Create a Gift Registry",
+  },
 ];
 
 const partyFeatures = [
@@ -162,7 +170,7 @@ export default function Home() {
             <h2 className="mt-4 text-balance font-display text-3xl font-semibold tracking-tight sm:text-4xl">The right way to gift for every kind of moment</h2>
             <p className="mt-4 leading-7 text-muted">From a quiet thank-you to a room full of guests, GiftCash keeps the experience simple, warm and easy to share.</p>
           </div>
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {giftWays.map((way, index) => (
               <article key={way.title} className={`group flex min-h-[22rem] flex-col rounded-[2rem] border p-6 shadow-soft transition duration-300 hover:-translate-y-1 hover:shadow-lift sm:p-7 ${index === 2 ? "border-brand/20 bg-brand-deep text-cream" : "border-ink/5 bg-white/80"}`}>
                 <span className={`grid h-12 w-12 place-items-center rounded-2xl ${index === 2 ? "bg-gold text-ink" : "bg-brand-soft text-brand"}`}><way.icon className="h-5 w-5" /></span>
