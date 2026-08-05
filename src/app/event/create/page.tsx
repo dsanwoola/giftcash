@@ -10,11 +10,27 @@ import { CURRENCIES, toMinor } from "@/lib/money";
 import { repo } from "@/lib/data/repo";
 import type { CreateEventInput } from "@/lib/data/repo-types";
 import { useAuth, friendlyAuthError } from "@/lib/auth/auth-context";
+import { getFirebaseAuth } from "@/lib/firebase/client";
 import { OCCASIONS, occasionById } from "@/lib/occasions";
 import type { CurrencyCode, EventType, GiftEvent } from "@/lib/types";
 
 const inputCls = "w-full rounded-2xl border border-ink/10 bg-white px-4 py-3 text-base outline-none focus:border-brand";
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+/** Turn the registry on for guests right after creation (best-effort). */
+async function enableRegistry(slug: string) {
+  try {
+    const token = await getFirebaseAuth().currentUser?.getIdToken().catch(() => undefined);
+    await fetch(`/api/events/${encodeURIComponent(slug)}/registry`, {
+      method: "PATCH",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ enabled: true }),
+    });
+  } catch {
+    /* organizer can still enable it manually from the registry section */
+  }
+}
 
 export default function CreateGiftPartyPage() {
   const [created, setCreated] = useState<GiftEvent | null>(null);
@@ -87,7 +103,9 @@ function CreateForm({ registry, onCreated }: { registry: boolean; onCreated: (pa
     setBusy(true);
     setError("");
     try {
-      onCreated(await repo.createEvent({ ...input, organizerName }));
+      const party = await repo.createEvent({ ...input, organizerName });
+      if (registry) await enableRegistry(party.slug);
+      onCreated(party);
     } catch (apiError) {
       setError(apiError instanceof Error ? apiError.message : "Could not create Gift Party.");
     } finally {
@@ -239,7 +257,7 @@ function SuccessShare({ party, registry }: { party: GiftEvent; registry: boolean
           <div className="mt-7 rounded-3xl border border-brand/15 bg-brand-soft/40 p-6 text-center shadow-soft">
             <p className="text-sm font-semibold text-brand">Step 1 · Pick your gifts</p>
             <p className="mt-1 text-sm text-muted">Add the items you&apos;d love to receive — friends can fund each one.</p>
-            <ButtonLink href={`/party/${party.slug}#gift-registry`} size="lg" className="mt-4 w-full">Add your gift ideas →</ButtonLink>
+            <ButtonLink href={`/party/${party.slug}?addGift=1#gift-registry`} size="lg" className="mt-4 w-full">Add your gift ideas →</ButtonLink>
           </div>
         )}
 

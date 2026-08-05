@@ -56,6 +56,17 @@ export function GiftRegistrySection({ slug, celebrants, currency, viewerRole }: 
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }, []);
 
+  // Arriving from the "Create a Gift Registry" flow (?addGift=1) opens the add
+  // form straight away so the organizer can pick their gifts in one tap.
+  useEffect(() => {
+    if (registry?.viewerRole !== "organizer") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("addGift") !== "1") return;
+    setAdding(true);
+    url.searchParams.delete("addGift");
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  }, [registry]);
+
   if (loading) return viewerRole === "public" ? null : <div className="mt-6 grid min-h-28 place-items-center rounded-3xl border border-ink/5 bg-white/70"><Loader2 className="h-5 w-5 animate-spin text-brand" /></div>;
   if (!registry) return error ? <p className="mt-5 rounded-2xl bg-pink/10 p-4 text-sm text-pink">{error}</p> : null;
   const privateView = registry.viewerRole === "organizer" || registry.viewerRole === "admin";
