@@ -95,6 +95,9 @@ export default function Home() {
                 <ButtonLink href="/party/create" size="lg" variant="gold" className="w-full sm:w-auto">
                   Create a Gift Party
                 </ButtonLink>
+                <ButtonLink href="/party/create?registry=1" size="lg" variant="outline" className="w-full sm:w-auto">
+                  Create a Gift Registry
+                </ButtonLink>
               </div>
               <Link href="/group/create" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:text-brand-deep">
                 Planning one gift together? Start a group gift <ArrowRight className="h-3.5 w-3.5" />

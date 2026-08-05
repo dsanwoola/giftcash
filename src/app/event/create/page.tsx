@@ -18,11 +18,12 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function CreateGiftPartyPage() {
   const [created, setCreated] = useState<GiftEvent | null>(null);
-  if (created) return <SuccessShare party={created} />;
-  return <CreateForm onCreated={setCreated} />;
+  const [registry] = useState(() => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("registry") === "1");
+  if (created) return <SuccessShare party={created} registry={registry} />;
+  return <CreateForm registry={registry} onCreated={setCreated} />;
 }
 
-function CreateForm({ onCreated }: { onCreated: (party: GiftEvent) => void }) {
+function CreateForm({ registry, onCreated }: { registry: boolean; onCreated: (party: GiftEvent) => void }) {
   const { user, signInWithGoogle } = useAuth();
 
   const [type, setType] = useState<EventType>("birthday");
@@ -134,10 +135,10 @@ function CreateForm({ onCreated }: { onCreated: (party: GiftEvent) => void }) {
         </div>
 
         <span className="mt-8 inline-flex items-center gap-2 rounded-full bg-brand-soft px-3 py-1 text-xs font-semibold text-brand">
-          <Sparkles className="h-3.5 w-3.5" /> Create in seconds
+          <Sparkles className="h-3.5 w-3.5" /> {registry ? "Gift Registry" : "Create in seconds"}
         </span>
-        <h1 className="mt-3 text-balance font-display text-3xl font-semibold sm:text-4xl">Who are we celebrating? 🎉</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">Add a name, tap create, and share your Gift Party anywhere.</p>
+        <h1 className="mt-3 text-balance font-display text-3xl font-semibold sm:text-4xl">{registry ? "Create your Gift Registry 🎁" : "Who are we celebrating? 🎉"}</h1>
+        <p className="mt-2 text-sm leading-6 text-muted">{registry ? "Add the celebration, then pick the gifts you'd love — and share your registry link." : "Add a name, tap create, and share your Gift Party anywhere."}</p>
 
         <div className="mt-6 space-y-5">
           {/* Occasion quick-pick */}
@@ -177,7 +178,7 @@ function CreateForm({ onCreated }: { onCreated: (party: GiftEvent) => void }) {
 
           <Button onClick={submit} size="lg" className="w-full" disabled={busy}>
             {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-            {busy ? "Creating…" : "Create & Share"}
+            {busy ? "Creating…" : registry ? "Create registry" : "Create & Share"}
           </Button>
           <p className="text-center text-xs text-muted">
             {user ? "Your Gift Party is saved to your account." : "No account needed to start — you'll sign in with Google when you create."}
@@ -218,24 +219,36 @@ function CreateForm({ onCreated }: { onCreated: (party: GiftEvent) => void }) {
   );
 }
 
-function SuccessShare({ party }: { party: GiftEvent }) {
+function SuccessShare({ party, registry }: { party: GiftEvent; registry: boolean }) {
   const url = typeof window !== "undefined" ? `${window.location.origin}/party/${party.slug}` : `/party/${party.slug}`;
   const date = new Date(party.date).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-  const message = `🎁 Celebrate ${party.celebrants} with a cash gift!\n${date}\n\nSend your gift and message here: ${url}`;
+  const message = registry
+    ? `🎁 We've created a gift registry for ${party.celebrants}!\n${date}\n\nPick a gift and celebrate with us here: ${url}`
+    : `🎁 Celebrate ${party.celebrants} with a cash gift!\n${date}\n\nSend your gift and message here: ${url}`;
   return (
     <div className="min-h-dvh bg-cream">
       <div className="mx-auto max-w-lg px-4 py-6 pb-12 sm:px-5">
         <div className="flex items-center justify-between"><Logo /><Link href="/dashboard" className="text-sm text-muted">Dashboard</Link></div>
         <div className="mt-10 text-center">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald text-white shadow-lift"><CheckCircle2 className="h-8 w-8" /></div>
-          <h1 className="mt-4 font-display text-2xl font-semibold">Your Gift Party is live! 🎉</h1>
-          <p className="mt-1 text-muted">Share it anywhere — everyone can celebrate with a gift in seconds.</p>
+          <h1 className="mt-4 font-display text-2xl font-semibold">{registry ? "Your Gift Registry is ready! 🎁" : "Your Gift Party is live! 🎉"}</h1>
+          <p className="mt-1 text-muted">{registry ? "Add the gifts you'd love, then share your registry link." : "Share it anywhere — everyone can celebrate with a gift in seconds."}</p>
         </div>
-        <div className="mt-7 rounded-3xl border border-ink/5 bg-white/70 p-6 shadow-soft">
-          <ShareHub url={url} title={party.title} defaultMessage={message} qrLabel="Scan to send a GiftCash" calendar={{ title: party.title, details: `Celebrate ${party.celebrants} with a cash gift: ${url}`, start: party.date }} />
+
+        {registry && (
+          <div className="mt-7 rounded-3xl border border-brand/15 bg-brand-soft/40 p-6 text-center shadow-soft">
+            <p className="text-sm font-semibold text-brand">Step 1 · Pick your gifts</p>
+            <p className="mt-1 text-sm text-muted">Add the items you&apos;d love to receive — friends can fund each one.</p>
+            <ButtonLink href={`/party/${party.slug}#gift-registry`} size="lg" className="mt-4 w-full">Add your gift ideas →</ButtonLink>
+          </div>
+        )}
+
+        <div className="mt-5 rounded-3xl border border-ink/5 bg-white/70 p-6 shadow-soft">
+          {registry && <p className="mb-4 text-sm font-semibold text-brand">Step 2 · Share your link</p>}
+          <ShareHub url={url} title={party.title} defaultMessage={message} qrLabel={registry ? "Scan to open the registry" : "Scan to send a GiftCash"} calendar={{ title: party.title, details: `Celebrate ${party.celebrants} with a cash gift: ${url}`, start: party.date }} />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <ButtonLink href={`/party/${party.slug}`} variant="outline" className="w-full">View Gift Party</ButtonLink>
+          <ButtonLink href={`/party/${party.slug}`} variant="outline" className="w-full">{registry ? "View registry page" : "View Gift Party"}</ButtonLink>
           <ButtonLink href={`/party/${party.slug}/live`} variant="gold" className="w-full">Open Party Mode</ButtonLink>
         </div>
       </div>

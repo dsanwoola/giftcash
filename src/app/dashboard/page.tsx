@@ -68,6 +68,11 @@ export default function DashboardHome() {
           <p className="mt-2 font-medium">Create a Gift Party</p>
           <p className="text-xs text-muted">{events?.length ? `${events.length} active` : "QR gifting pages with live Party Mode"}</p>
         </Link>
+        <Link href="/party/create?registry=1" className="rounded-3xl border border-ink/5 bg-white/70 p-5 transition hover:shadow-soft">
+          <p className="text-2xl">🎁</p>
+          <p className="mt-2 font-medium">Create a Gift Registry</p>
+          <p className="text-xs text-muted">Pick the gifts you&apos;d love, then share the link</p>
+        </Link>
       </div>
       {(groups?.length || events?.length) ? (
         <div className="mt-3 space-y-2">
