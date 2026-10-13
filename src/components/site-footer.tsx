@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-ink/5 bg-white/40">
+    <footer className="bg-white">
       <div className="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-4">
         <div className="md:col-span-2">
           <Logo />
@@ -33,7 +33,7 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-ink/5 py-5 text-center text-xs text-muted">
+      <div className="py-5 text-center text-sm text-muted">
         © {new Date().getFullYear()} GiftCash.ng. Make every cash gift feel personal.
       </div>
     </footer>
